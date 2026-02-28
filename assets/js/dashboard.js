@@ -3,10 +3,17 @@ let currentPlatform = 'quotex';
 let currentAsset = null;
 let assetsData = [];
 let candlesData = [];
+// API base (always use production API domain)
+const API_BASE = 'https://checker.planalto.cc';
 
+// Helper to build API URLs safely
+function apiUrl(pathWithQuery) {
+  // pathWithQuery examples: "get_assets.php?platform=quotex"
+  return `${API_BASE}/api/${pathWithQuery}`;
+}
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Dashboard initializing...');
+    console.log('API_BASE =>', API_BASE);
     initializePlatformSelector();
     loadAssets();
     initializeSearch();
@@ -85,7 +92,7 @@ async function loadAssets() {
     assetsGrid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading assets...</p></div>';
     
     try {
-        const response = await fetch(`api/get_assets.php?platform=${encodeURIComponent(currentPlatform)}`);
+        const response = await fetch(apiUrl(`get_assets.php?platform=${encodeURIComponent(currentPlatform)}`), {   credentials: 'include' });
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -390,7 +397,7 @@ async function loadChart(asset) {
     return new Promise((resolve, reject) => {
         // Add timestamp to prevent caching
         const timestamp = new Date().getTime();
-        const imageUrl = `api/get_screenshot.php?platform=${currentPlatform}&asset=${encodeURIComponent(asset)}&zoom=2.5&t=${timestamp}`;
+        const imageUrl = apiUrl(`get_screenshot.php?platform=${encodeURIComponent(currentPlatform)}&asset=${encodeURIComponent(asset)}&zoom=2.5&t=${timestamp}`);
         
         // Set timeout for image loading (15 seconds)
         const timeout = setTimeout(() => {
@@ -505,7 +512,7 @@ async function loadCandlesAndAnalyze(asset) {
         });
         
         // Fetch and analyze market conditions (includes basic trend analysis)
-        const response = await fetch(`api/market_analysis.php?platform=${currentPlatform}&asset=${encodeURIComponent(asset)}`);
+        const response = await fetch(   apiUrl(`market_analysis.php?platform=${encodeURIComponent(currentPlatform)}&asset=${encodeURIComponent(asset)}`),   { credentials: 'include' } );
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
