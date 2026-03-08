@@ -700,7 +700,11 @@ function filterSignalsWithinWindow(signals, cycle) {
     const mins = hhmmToMinutes(p.serverTime);
     if (mins == null) return false;
 
-    if (mins % 10 === 0) return false;
+    const minuteOfHour = mins % 60;
+
+    if (minuteOfHour === 0 || minuteOfHour === 10 || minuteOfHour === 20 || minuteOfHour === 30 || minuteOfHour === 40 || minuteOfHour === 50) {
+      return false;
+    }
 
     if (!overnight) return mins >= startMin && mins <= endMin;
     return mins >= startMin || mins <= endMin;
