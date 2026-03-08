@@ -546,10 +546,11 @@ async function sendTelegramMessage(env, text) {
 }
 
 function formatGeneratedTelegramMessage(cycle) {
-  const parsed = cycle.generatedSignals
+const parsed = excludeBoundaryMinuteSignals(
+  cycle.generatedSignals
     .map(parseSignalRaw)
     .filter(Boolean)
-    .sort((a, b) => compareSignalsByOutputTime(a, b, cycle));
+).sort((a, b) => compareSignalsByOutputTime(a, b, cycle));
 
   const { allBrokers, otcOnly } = splitSignalsByMarket(parsed);
   const dateLabel = outputDateFromServerIso(cycle.startServerIso);
@@ -696,15 +697,8 @@ function filterSignalsWithinWindow(signals, cycle) {
   return signals.filter(sig => {
     const p = parseSignalRaw(sig);
     if (!p) return false;
-
     const mins = hhmmToMinutes(p.serverTime);
     if (mins == null) return false;
-
-    const minuteOfHour = mins % 60;
-
-    if (minuteOfHour === 0 || minuteOfHour === 10 || minuteOfHour === 20 || minuteOfHour === 30 || minuteOfHour === 40 || minuteOfHour === 50) {
-      return false;
-    }
 
     if (!overnight) return mins >= startMin && mins <= endMin;
     return mins >= startMin || mins <= endMin;
@@ -769,6 +763,14 @@ function splitSignalsByMarket(parsedSignals) {
   }
 
   return { allBrokers, otcOnly };
+}
+
+function excludeBoundaryMinuteSignals(parsedSignals) {
+  return parsedSignals.filter(sig => {
+    const mins = hhmmToMinutes(sig.serverTime);
+    if (mins == null) return false;
+    return mins % 10 !== 0;
+  });
 }
 
 function formatSignalLine(sig, includeResultIcon = false) {
