@@ -1,953 +1,660 @@
-export default {
-  async scheduled(controller, env, ctx) {
-    ctx.waitUntil(runScheduler(env));
-  },
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LiveBot Control Panel</title>
+  <style>
+    :root{
+      --bg1:#0b1020;
+      --bg2:#111933;
+      --glass:rgba(255,255,255,0.08);
+      --glass-strong:rgba(255,255,255,0.14);
+      --border:rgba(255,255,255,0.15);
+      --text:#eaf2ff;
+      --muted:#9fb0d0;
+      --green:#25d366;
+      --red:#ff5c7a;
+      --amber:#ffc857;
+      --blue:#6ea8fe;
+      --shadow:0 20px 50px rgba(0,0,0,0.35);
+      --radius:24px;
+    }
 
-  async fetch(request, env, ctx) {
-    const url = new URL(request.url);
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;
+      min-height:100%;
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(110,168,254,0.18), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(37,211,102,0.12), transparent 28%),
+        linear-gradient(135deg, var(--bg1), var(--bg2));
+    }
 
-if (url.pathname === "/status") {
-  if (!env.STATE_KV) {
-    return json({ ok:false, error:"STATE_KV binding missing" });
-  }
+    body{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
 
-  const list = await env.STATE_KV.list({ prefix: "cycle:" });
-  const items = [];
+    .bg-grid{
+      position:fixed;
+      inset:0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size:32px 32px;
+      mask-image:radial-gradient(circle at center, black 45%, transparent 90%);
+      pointer-events:none;
+    }
 
-  for (const k of list.keys) {
-    const v = await env.STATE_KV.get(k.name, "json");
-    if (v) items.push(v);
-  }
+    .orb{
+      position:fixed;
+      border-radius:999px;
+      filter:blur(60px);
+      opacity:0.45;
+      pointer-events:none;
+    }
 
-  return json({ ok:true, cycles: items });
-}
+    .orb.one{
+      width:260px;height:260px;
+      background:#2f80ed;
+      top:8%;
+      left:8%;
+    }
 
+    .orb.two{
+      width:220px;height:220px;
+      background:#25d366;
+      bottom:8%;
+      right:10%;
+    }
 
-    if (url.pathname === "/test-telegram") {
-  try {
-    await sendTelegramMessage(env, "✅ Telegram test from Cloudflare Worker");
-    return json({ ok: true, sent: true });
-  } catch (e) {
-    return json({ ok: false, error: String(e?.message || e) }, 500);
-  }
-}
+    .panel{
+      width:min(100%, 980px);
+      display:grid;
+      grid-template-columns:1.1fr 0.9fr;
+      gap:24px;
+    }
 
-if (url.pathname === "/test-generate") {
-  try {
-    const payload = {
-      timeframes: ["M1"],
-      assets: ["USDBRL-OTC", "AUDCHF-OTC"],
-      directions: ["CALL", "PUT"],
-      days: 5,
-      rates: { fixed: 100 },
-      startTime: "00:30",
-      endTime: "00:35",
-    };
+    .card{
+      background:var(--glass);
+      border:1px solid var(--border);
+      backdrop-filter:blur(18px);
+      -webkit-backdrop-filter:blur(18px);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+    }
 
-    const result = await startSignalsJob(env, CONFIG.BROKER, payload);
-    return json({ ok: true, result });
-  } catch (e) {
-    return json({ ok: false, error: String(e?.message || e) }, 500);
-  }
-}
+    .hero{
+      padding:32px;
+      position:relative;
+      overflow:hidden;
+    }
 
-    if (url.pathname === "/run-now") {
+    .hero::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(120deg, rgba(255,255,255,0.10), transparent 45%, rgba(255,255,255,0.04));
+      pointer-events:none;
+    }
+
+    .eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.12);
+      color:var(--muted);
+      font-size:13px;
+      letter-spacing:0.2px;
+    }
+
+    h1{
+      margin:18px 0 10px;
+      font-size:clamp(2rem, 4vw, 3.6rem);
+      line-height:1.02;
+      letter-spacing:-0.04em;
+    }
+
+    .sub{
+      margin:0;
+      color:var(--muted);
+      max-width:58ch;
+      line-height:1.6;
+      font-size:15px;
+    }
+
+    .hero-stats{
+      margin-top:28px;
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:14px;
+    }
+
+    .mini{
+      padding:16px;
+      border-radius:18px;
+      background:rgba(255,255,255,0.07);
+      border:1px solid rgba(255,255,255,0.10);
+    }
+
+    .mini .label{
+      font-size:12px;
+      color:var(--muted);
+      margin-bottom:8px;
+      text-transform:uppercase;
+      letter-spacing:0.08em;
+    }
+
+    .mini .value{
+      font-size:20px;
+      font-weight:700;
+    }
+
+    .control{
+      padding:26px;
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+    }
+
+    .section-title{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    .section-title h2{
+      margin:0;
+      font-size:22px;
+      letter-spacing:-0.02em;
+    }
+
+    .badge{
+      padding:8px 12px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:0.08em;
+      border:1px solid rgba(255,255,255,0.12);
+      background:rgba(255,255,255,0.06);
+      color:var(--muted);
+    }
+
+    .status-box{
+      padding:18px;
+      border-radius:20px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+      border:1px solid rgba(255,255,255,0.10);
+    }
+
+    .status-line{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-bottom:10px;
+    }
+
+    .dot{
+      width:12px;
+      height:12px;
+      border-radius:999px;
+      box-shadow:0 0 18px currentColor;
+    }
+
+    .dot.on{ color:var(--green); background:var(--green); }
+    .dot.off{ color:var(--red); background:var(--red); }
+    .dot.warn{ color:var(--amber); background:var(--amber); }
+
+    .status-text{
+      font-size:24px;
+      font-weight:800;
+      letter-spacing:-0.03em;
+    }
+
+    .meta{
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.6;
+      word-break:break-word;
+    }
+
+    .switch-wrap{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      padding:18px;
+      border-radius:20px;
+      background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.10);
+    }
+
+    .switch-copy h3{
+      margin:0 0 6px;
+      font-size:18px;
+    }
+
+    .switch-copy p{
+      margin:0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.55;
+    }
+
+    .switch{
+      position:relative;
+      width:92px;
+      height:50px;
+      flex:0 0 auto;
+    }
+
+    .switch input{
+      opacity:0;
+      width:0;
+      height:0;
+    }
+
+    .slider{
+      position:absolute;
+      inset:0;
+      cursor:pointer;
+      border-radius:999px;
+      background:rgba(255,255,255,0.12);
+      border:1px solid rgba(255,255,255,0.14);
+      transition:all .25s ease;
+      box-shadow:inset 0 2px 8px rgba(0,0,0,0.25);
+    }
+
+    .slider:before{
+      content:"";
+      position:absolute;
+      height:38px;
+      width:38px;
+      left:5px;
+      top:5px;
+      border-radius:50%;
+      background:linear-gradient(180deg, #ffffff, #d8e4ff);
+      transition:all .25s ease;
+      box-shadow:0 8px 22px rgba(0,0,0,0.28);
+    }
+
+    .switch input:checked + .slider{
+      background:linear-gradient(135deg, rgba(37,211,102,0.45), rgba(37,211,102,0.18));
+      border-color:rgba(37,211,102,0.45);
+    }
+
+    .switch input:checked + .slider:before{
+      transform:translateX(42px);
+    }
+
+    .actions{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+
+    button{
+      appearance:none;
+      border:none;
+      outline:none;
+      cursor:pointer;
+      border-radius:18px;
+      padding:15px 16px;
+      font-weight:800;
+      letter-spacing:0.02em;
+      font-size:14px;
+      color:var(--text);
+      transition:transform .18s ease, opacity .18s ease, box-shadow .18s ease;
+    }
+
+    button:hover{ transform:translateY(-1px); }
+    button:active{ transform:translateY(0); }
+    button:disabled{ opacity:.55; cursor:not-allowed; }
+
+    .btn-primary{
+      background:linear-gradient(135deg, rgba(110,168,254,0.95), rgba(71,125,255,0.85));
+      box-shadow:0 14px 30px rgba(71,125,255,0.25);
+    }
+
+    .btn-danger{
+      background:linear-gradient(135deg, rgba(255,92,122,0.95), rgba(214,62,91,0.85));
+      box-shadow:0 14px 30px rgba(214,62,91,0.22);
+    }
+
+    .btn-ghost{
+      background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.12);
+      box-shadow:none;
+    }
+
+    .log{
+      min-height:118px;
+      padding:16px 18px;
+      border-radius:20px;
+      background:rgba(6,10,20,0.35);
+      border:1px solid rgba(255,255,255,0.08);
+      color:#cfe0ff;
+      font-size:13px;
+      line-height:1.65;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+
+    .footer-note{
+      margin-top:4px;
+      color:var(--muted);
+      font-size:12px;
+      text-align:center;
+    }
+
+    .pill-online{
+      color:#bff7d3;
+      background:rgba(37,211,102,0.12);
+      border-color:rgba(37,211,102,0.25);
+    }
+
+    .pill-offline{
+      color:#ffd2dc;
+      background:rgba(255,92,122,0.12);
+      border-color:rgba(255,92,122,0.25);
+    }
+
+    .pill-unknown{
+      color:#ffeab5;
+      background:rgba(255,200,87,0.12);
+      border-color:rgba(255,200,87,0.25);
+    }
+
+    a.inline-link{
+      color:#b8d4ff;
+      text-decoration:none;
+    }
+
+    @media (max-width: 860px){
+      .panel{
+        grid-template-columns:1fr;
+      }
+      .hero-stats{
+        grid-template-columns:1fr;
+      }
+      .actions{
+        grid-template-columns:1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="orb one"></div>
+  <div class="orb two"></div>
+
+  <main class="panel">
+    <section class="card hero">
+      <div class="eyebrow">
+        <span>◉</span>
+        <span>Netlify Dashboard Interface</span>
+      </div>
+
+      <h1>LiveBot Switch Console</h1>
+      <p class="sub">
+        Turn your Cloudflare Worker bot ON or OFF from a clean control panel.
+        This page talks directly to your Worker API and shows the current runtime mode.
+      </p>
+
+      <div class="hero-stats">
+        <div class="mini">
+          <div class="label">Bot State</div>
+          <div class="value" id="miniState">Unknown</div>
+        </div>
+        <div class="mini">
+          <div class="label">Worker Health</div>
+          <div class="value" id="miniHealth">Checking…</div>
+        </div>
+        <div class="mini">
+          <div class="label">Last Update</div>
+          <div class="value" id="miniUpdated">—</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card control">
+      <div class="section-title">
+        <h2>Bot Control</h2>
+        <div class="badge pill-unknown" id="statusBadge">UNKNOWN</div>
+      </div>
+
+      <div class="status-box">
+        <div class="status-line">
+          <div class="dot warn" id="statusDot"></div>
+          <div class="status-text" id="statusText">Unknown</div>
+        </div>
+        <div class="meta" id="statusMeta">
+          Waiting for Worker status...
+        </div>
+      </div>
+
+      <div class="switch-wrap">
+        <div class="switch-copy">
+          <h3>Master Switch</h3>
+          <p>
+            Toggle the scheduler state without editing code manually.
+            When OFF, cron still runs, but the bot does nothing.
+          </p>
+        </div>
+
+        <label class="switch">
+          <input type="checkbox" id="botToggle" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="actions">
+        <button class="btn-primary" id="refreshBtn">Refresh Status</button>
+        <button class="btn-ghost" id="pingBtn">Ping Worker</button>
+        <button class="btn-primary" id="onBtn">Force ON</button>
+        <button class="btn-danger" id="offBtn">Force OFF</button>
+      </div>
+
+      <div class="log" id="logBox">Ready.</div>
+      <div class="footer-note">
+        Set your Worker base URL in the code below:
+        <code>WORKER_BASE_URL</code>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // =========================
+    // CHANGE THIS
+    // =========================
+    // const WORKER_BASE_URL = "https://YOUR-WORKER-NAME.YOUR-SUBDOMAIN.workers.dev";
+    // Example:
+    const WORKER_BASE_URL = "https://livebot.thermrmillion.workers.dev";
+
+    const statusText = document.getElementById("statusText");
+    const statusMeta = document.getElementById("statusMeta");
+    const statusDot = document.getElementById("statusDot");
+    const statusBadge = document.getElementById("statusBadge");
+    const botToggle = document.getElementById("botToggle");
+    const logBox = document.getElementById("logBox");
+    const miniState = document.getElementById("miniState");
+    const miniHealth = document.getElementById("miniHealth");
+    const miniUpdated = document.getElementById("miniUpdated");
+
+    const refreshBtn = document.getElementById("refreshBtn");
+    const pingBtn = document.getElementById("pingBtn");
+    const onBtn = document.getElementById("onBtn");
+    const offBtn = document.getElementById("offBtn");
+
+    let isBusy = false;
+    let suppressToggleEvent = false;
+
+    function log(message) {
+      const timestamp = new Date().toLocaleTimeString();
+      logBox.textContent = `[${timestamp}] ${message}\n\n` + logBox.textContent;
+    }
+
+    function setBusy(state) {
+      isBusy = state;
+      refreshBtn.disabled = state;
+      pingBtn.disabled = state;
+      onBtn.disabled = state;
+      offBtn.disabled = state;
+      botToggle.disabled = state;
+    }
+
+    function setUiState(enabled, details = {}) {
+      suppressToggleEvent = true;
+      botToggle.checked = !!enabled;
+      suppressToggleEvent = false;
+
+      const mode = enabled ? "ON" : "OFF";
+      statusText.textContent = enabled ? "Bot Enabled" : "Bot Disabled";
+      miniState.textContent = mode;
+      miniUpdated.textContent = new Date().toLocaleTimeString();
+
+      if (enabled) {
+        statusDot.className = "dot on";
+        statusBadge.className = "badge pill-online";
+        statusBadge.textContent = "ONLINE";
+      } else {
+        statusDot.className = "dot off";
+        statusBadge.className = "badge pill-offline";
+        statusBadge.textContent = "OFFLINE";
+      }
+
+      statusMeta.textContent =
+        `enabled: ${String(enabled)} | service: ${details.service || "livebot"}`
+        + (details.source ? ` | source: ${details.source}` : "")
+        + (details.message ? ` | note: ${details.message}` : "");
+    }
+
+    function setUnknownState(message) {
+      statusDot.className = "dot warn";
+      statusBadge.className = "badge pill-unknown";
+      statusBadge.textContent = "UNKNOWN";
+      statusText.textContent = "Unknown";
+      statusMeta.textContent = message || "Unable to fetch state";
+      miniState.textContent = "Unknown";
+    }
+
+    async function safeJson(res) {
+      const text = await res.text();
       try {
-        await runScheduler(env);
-        return json({ ok: true, ran: true });
-      } catch (e) {
-        return json({ ok: false, error: String(e?.message || e) }, 500);
+        return JSON.parse(text);
+      } catch {
+        return { raw: text };
       }
     }
 
-    if (url.pathname === "/debug-payout") {
+    async function getStatus() {
+      setBusy(true);
       try {
-        const topAssets = await getTopAssetsByPayout(env, CONFIG.BROKER, CONFIG.TOP_ASSET_COUNT);
-        return json({ ok: true, topAssets });
-      } catch (e) {
-        return json({ ok: false, error: String(e?.message || e) }, 500);
-      }
-    }
+        const res = await fetch(`${WORKER_BASE_URL}/status`, {
+          method: "GET",
+          headers: { "accept": "application/json" }
+        });
 
-    return json({ ok: true, service: "sio-direct-worker" });
-  },
-};
+        const data = await safeJson(res);
 
-const CONFIG = {
-  BROKER: "quotex",          // "quotex" | "iqoption" | "pocketoption"
-  TIMEFRAME: "M1",
-  TOP_ASSET_COUNT: 5,
-  ANALYSIS_DAYS: 5,
-  DIRECTIONS: ["CALL", "PUT"],
-  ACCURACY_FIXED: 100,
-  GENERATOR_MARTINGALE: 0,
-  VALIDATOR_MARTINGALE: 1,
-  OUTPUT_TZ_HOURS: 6,        // Telegram display timezone
-  SERVER_TZ_HOURS: -3,       // SIO server timezone
-  SLOT_INTERVAL_MINUTES: 10,
-  SLOT_MINUTE_MOD: 3,        // xx:03, xx:13, xx:23, ...
-  // GENERATION_WINDOW_MINUTES: 10,
-  VALIDATION_DELAY_MINUTES: 3,
-  SIGNAL_START_DELAY_MINUTES: 2,
-  SIGNAL_WINDOW_MINUTES: 5,
-  CLEANUP_AFTER_HOURS: 24,
-};
-
-const ASSETS_QX = [
-"USDBRL-OTC","USDARS-OTC","USDIDR-OTC","DASUSD-OTC","EURNZD-OTC","EURSGD-OTC","AUDNZD-OTC",
-"GBPNZD-OTC","NZDCAD-OTC","NZDCHF-OTC","NZDJPY-OTC","UKBrent-OTC","USDBDT-OTC","USDDZD-OTC",
-"USDINR-OTC","USDMXN-OTC","USDNGN-OTC","USDPKR-OTC","USDTRY-OTC","USDZAR-OTC","USCrude-OTC",
-"USDEGP-OTC","USDPHP-OTC","AUDCHF-OTC","CADCHF-OTC","DAUSD-OTC","NZDUSD-OTC","USDCOP-OTC",
-"AUDJPY","AUDCAD","AUDUSD","CADJPY","EURCAD","EURGBP","EURJPY","EURUSD","GBPAUD","GBPJPY",
-"GBPUSD","USDCAD","USDJPY"
-];
-
-async function runScheduler(env) {
-  const nowUtcMs = Date.now();
-
-  await cleanupOldCycles(env, nowUtcMs);
-  await progressExistingCycles(env, nowUtcMs);
-
-  const nowServer = partsAtOffset(nowUtcMs, CONFIG.SERVER_TZ_HOURS);
-  if (nowServer.minute % CONFIG.SLOT_INTERVAL_MINUTES !== CONFIG.SLOT_MINUTE_MOD) {
-    return;
-  }
-
-  const slotKey = serverSlotKey(nowUtcMs);
-  const cycleKey = `cycle:${slotKey}`;
-
-  const existing = await env.STATE_KV.get(cycleKey, "json");
-  if (existing) return;
-
-  const cycle = await startNewCycle(env, nowUtcMs, slotKey);
-  await env.STATE_KV.put(cycleKey, JSON.stringify(cycle));
-}
-
-async function startNewCycle(env, nowUtcMs, slotKey) {
-  const topAssets = await getTopAssetsByPayout(env, CONFIG.BROKER, CONFIG.TOP_ASSET_COUNT);
-  if (!topAssets.length) {
-    throw new Error("No payout assets found.");
-  }
-
-  const startServer = partsAtOffset(
-    nowUtcMs + CONFIG.SIGNAL_START_DELAY_MINUTES * 60 * 1000,
-    CONFIG.SERVER_TZ_HOURS
-  );
-
-  const endServer = partsAtOffset(
-    nowUtcMs + (CONFIG.SIGNAL_START_DELAY_MINUTES + CONFIG.SIGNAL_WINDOW_MINUTES) * 60 * 1000,
-    CONFIG.SERVER_TZ_HOURS
-  );
-
-  const startTime = hhmmFromParts(startServer);
-  const endTime = hhmmFromParts(endServer);
-  const segments = buildServerSegments(startServer, endServer);
-
-  const generationJobs = [];
-  for (const seg of segments) {
-    const payload = {
-      timeframes: [CONFIG.TIMEFRAME],
-      assets: topAssets,
-      directions: CONFIG.DIRECTIONS,
-      days: CONFIG.ANALYSIS_DAYS,
-      rates: { fixed: CONFIG.ACCURACY_FIXED },
-      gale: CONFIG.GENERATOR_MARTINGALE,
-      startTime: seg.start,
-      endTime: seg.end,
-    };
-
-    const result = await startSignalsJob(env, CONFIG.BROKER, payload);
-    const id = result?.id || result?.job_id;
-    if (!id) {
-      throw new Error(`catalog_signals_async did not return job id: ${JSON.stringify(result)}`);
-    }
-
-    generationJobs.push({
-      id,
-      segmentStart: seg.start,
-      segmentEnd: seg.end,
-    });
-  }
-
-  return {
-    kind: "signal-cycle",
-    version: 1,
-    slotKey,
-    phase: "generating",
-    broker: CONFIG.BROKER,
-    timeframe: CONFIG.TIMEFRAME,
-    topAssets,
-    startServerDate: ymdFromParts(startServer),
-    startServerTime: startTime,
-    endServerDate: ymdFromParts(endServer),
-    endServerTime: endTime,
-    startServerIso: isoFromParts(startServer),
-    endServerIso: isoFromParts(endServer),
-    validateAfterServerIso: isoAtOffset(
-      nowUtcMs + (
-        CONFIG.SIGNAL_START_DELAY_MINUTES +
-        CONFIG.SIGNAL_WINDOW_MINUTES +
-        CONFIG.VALIDATION_DELAY_MINUTES
-      ) * 60 * 1000,
-      CONFIG.SERVER_TZ_HOURS
-    ),
-    generationJobs,
-    generatedSignals: [],
-    validationJobs: [],
-    validatedSignals: [],
-    sentGenerated: false,
-    sentValidated: false,
-    createdAtUtc: new Date().toISOString(),
-    updatedAtUtc: new Date().toISOString(),
-    error: null,
-  };
-}
-
-async function progressExistingCycles(env, nowUtcMs) {
-  const list = await env.STATE_KV.list({ prefix: "cycle:" });
-
-  for (const entry of list.keys) {
-    const key = entry.name;
-    const cycle = await env.STATE_KV.get(key, "json");
-    if (!cycle) continue;
-    if (cycle.phase === "completed" || cycle.phase === "failed") continue;
-
-    try {
-      if (cycle.phase === "generating") {
-        const updated = await progressGeneration(env, cycle);
-        updated.updatedAtUtc = new Date().toISOString();
-        await env.STATE_KV.put(key, JSON.stringify(updated));
-        continue;
-      }
-
-      if (cycle.phase === "await_validation") {
-        const nowServerIso = isoAtOffset(nowUtcMs, CONFIG.SERVER_TZ_HOURS);
-        if (nowServerIso >= cycle.validateAfterServerIso) {
-          const updated = await startValidation(env, cycle);
-          updated.updatedAtUtc = new Date().toISOString();
-          await env.STATE_KV.put(key, JSON.stringify(updated));
+        if (!res.ok) {
+          throw new Error(data.error || data.raw || `HTTP ${res.status}`);
         }
-        continue;
-      }
 
-      if (cycle.phase === "validating") {
-        const updated = await progressValidation(env, cycle);
-        updated.updatedAtUtc = new Date().toISOString();
-        await env.STATE_KV.put(key, JSON.stringify(updated));
-        continue;
-      }
-  } catch (err) {
-      cycle.phase = "failed";
-      cycle.error = String(err?.message || err);
-      cycle.errorStack = err?.stack || null;
-      cycle.updatedAtUtc = new Date().toISOString();
+        const enabled = !!data.enabled;
+        setUiState(enabled, {
+          service: data.service,
+          source: data.source,
+          message: data.error || ""
+        });
 
+        miniHealth.textContent = "Healthy";
+        log(`Status loaded: ${enabled ? "ON" : "OFF"}`);
+      } catch (err) {
+        miniHealth.textContent = "Error";
+        setUnknownState(err.message || String(err));
+        log(`Status check failed: ${err.message || String(err)}`);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function setBotState(enabled) {
+      setBusy(true);
       try {
-        await sendTelegramMessage(env, [
-          "❌ Worker cycle failed",
-          `slot: ${cycle.slotKey}`,
-          `phase: ${cycle.phase}`,
-          `error: ${cycle.error}`,
-        ].join("\n"));
-      } catch (_) {}
+        const endpoint = enabled ? "/bot/on" : "/bot/off";
+        const res = await fetch(`${WORKER_BASE_URL}${endpoint}`, {
+          method: "POST",
+          headers: { "accept": "application/json" }
+        });
 
-      await env.STATE_KV.put(key, JSON.stringify(cycle));
-    }
-  }
-}
+        const data = await safeJson(res);
 
-async function progressGeneration(env, cycle) {
-  let allDone = true;
-  const allSignals = [];
+        if (!res.ok) {
+          throw new Error(data.error || data.raw || `HTTP ${res.status}`);
+        }
 
-  for (const job of cycle.generationJobs) {
-    const data = await pollSignalsJob(env, cycle.broker, job.id);
+        setUiState(!!data.enabled, {
+          service: data.service,
+          source: data.source,
+          message: data.message || ""
+        });
 
-    const status = String(data?.status || "").toLowerCase();
-    const running = data?.running;
-    const signals = Array.isArray(data?.signals) ? data.signals : [];
-
-    const done =
-      status === "finished" ||
-      status === "done" ||
-      status === "completed" ||
-      running === false;
-
-if (!done) {
-  allDone = false;
-}
-
-    for (const s of signals) {
-      allSignals.push(s);
-    }
-  }
-
-if (!allDone) {
-  return cycle;
-}
-
-  const deduped = Array.from(new Set(allSignals));
-  const filtered = filterSignalsWithinWindow(deduped, cycle);
-  cycle.generatedSignals = filtered;
-
-  if (!cycle.sentGenerated) {
-    const msg = formatGeneratedTelegramMessage(cycle);
-    await sendTelegramMessage(env, msg);
-    cycle.sentGenerated = true;
-  }
-
-  cycle.phase = "await_validation";
-  return cycle;
-}
-
-async function startValidation(env, cycle) {
-  const grouped = groupSignalsByServerDate(cycle.generatedSignals, cycle);
-  const validationJobs = [];
-
-  for (const [serverDate, signals] of Object.entries(grouped)) {
-    if (!signals.length) continue;
-
-    const payload = {
-      info: {
-        broker: normalizeValidatorBroker(cycle.broker),
-        date: serverDate,
-        gale: CONFIG.VALIDATOR_MARTINGALE,
-        time: timeframeToMinutes(cycle.timeframe),
-      },
-      signals,
-    };
-
-    const res = await startCheckJob(env, cycle.broker, payload);
-    const id = res?.id || res?.job_id;
-    if (!id) {
-      throw new Error(`check did not return job id for ${serverDate}: ${JSON.stringify(res)}`);
+        miniHealth.textContent = "Healthy";
+        log(`Bot switched ${enabled ? "ON" : "OFF"}`);
+      } catch (err) {
+        log(`State change failed: ${err.message || String(err)}`);
+        await getStatus();
+      } finally {
+        setBusy(false);
+      }
     }
 
-    validationJobs.push({
-      id,
-      serverDate,
-    });
-  }
+    async function pingWorker() {
+      setBusy(true);
+      try {
+        const res = await fetch(`${WORKER_BASE_URL}/`, {
+          method: "GET",
+          headers: { "accept": "application/json" }
+        });
 
-  cycle.validationJobs = validationJobs;
-  cycle.phase = "validating";
-  return cycle;
-}
+        const data = await safeJson(res);
 
-async function progressValidation(env, cycle) {
-  let allDone = true;
-  const allSignals = [];
+        if (!res.ok) {
+          throw new Error(data.error || data.raw || `HTTP ${res.status}`);
+        }
 
-  for (const job of cycle.validationJobs) {
-    const data = await pollCheckJob(env, cycle.broker, job.id);
-
-    const status = String(data?.status || "").toLowerCase();
-    const running = data?.running;
-    const signals = Array.isArray(data?.signals) ? data.signals : [];
-
-    const done =
-      status === "finished" ||
-      status === "done" ||
-      status === "completed" ||
-      running === false;
-
-if (!done) {
-  allDone = false;
-}
-    for (const s of signals) {
-      allSignals.push(s);
+        miniHealth.textContent = "Healthy";
+        log(`Ping success: ${JSON.stringify(data)}`);
+      } catch (err) {
+        miniHealth.textContent = "Error";
+        log(`Ping failed: ${err.message || String(err)}`);
+      } finally {
+        setBusy(false);
+      }
     }
-  }
 
-if (!allDone) {
-  return cycle;
-}
+    refreshBtn.addEventListener("click", getStatus);
+    pingBtn.addEventListener("click", pingWorker);
+    onBtn.addEventListener("click", () => setBotState(true));
+    offBtn.addEventListener("click", () => setBotState(false));
 
-  cycle.validatedSignals = Array.from(new Set(allSignals));
-
-  if (!cycle.sentValidated) {
-    const msg = formatValidationTelegramMessage(cycle);
-    await sendTelegramMessage(env, msg);
-    cycle.sentValidated = true;
-  }
-
-  cycle.phase = "completed";
-  return cycle;
-}
-
-async function getTopAssetsByPayout(env, broker, topN) {
-  const url = payoutUrl(env, broker);
-
-  const res = await fetch(url, {
-    method: "GET",
-    headers: { accept: "application/json" },
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(`payout request failed with HTTP ${res.status}: ${JSON.stringify(data)}`);
-  }
-
-  const marketKeys = Object.keys(data || {});
-  const marketKey = marketKeys.includes("turbo") ? "turbo" : (marketKeys[0] || null);
-  if (!marketKey) return [];
-
-  const bucket = data[marketKey] || {};
-
-const allowed = ASSETS_QX;
-// const allowed =
-//   broker === "quotex" ? ASSETS_QX :
-//   broker === "iqoption" ? ASSETS_IQ :
-//   ASSETS_PO;
-
-return Object.entries(bucket)
-  .filter(([asset]) => allowed.includes(asset))
-  .map(([asset, payout]) => ({
-    asset: String(asset),
-    payout: Number(payout),
-  }))
-  .filter(x => Number.isFinite(x.payout))
-  .sort((a,b)=>b.payout-a.payout)
-  .slice(0, topN)
-  .map(x=>x.asset);
-}
-
-async function startSignalsJob(env, broker, payload) {
-  const url = signalsStartUrl(env, broker);
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "accept": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(`catalog_signals_async failed: ${data?.error || `HTTP ${res.status}`}`);
-  }
-  return data;
-}
-
-async function pollSignalsJob(env, broker, id) {
-  const url = signalsPollUrl(env, broker, id);
-  const res = await fetch(url, {
-    method: "GET",
-    headers: { accept: "application/json" },
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(`catalog_signals poll failed: ${data?.error || `HTTP ${res.status}`}`);
-  }
-  return data;
-}
-
-async function startCheckJob(env, broker, payload) {
-  const url = checkStartUrl(env, broker);
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "accept": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(`check start failed: ${data?.error || `HTTP ${res.status}`}`);
-  }
-  return data;
-}
-
-async function pollCheckJob(env, broker, id) {
-  const url = checkPollUrl(env, broker, id);
-  const res = await fetch(url, {
-    method: "GET",
-    headers: { accept: "application/json" },
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(`check poll failed: ${data?.error || `HTTP ${res.status}`}`);
-  }
-  return data;
-}
-
-function payoutUrl(env, broker) {
-  const base = stripSlash(env.API_BASE);
-  const b = String(broker || "").toLowerCase();
-
-  if (b === "quotex") return `${base}/quotex/payout`;
-  if (b === "iqoption") return `${base}/iqoption/payout`;
-  if (b === "pocketoption" || b === "pocket") return `${base}/pocket/payout`;
-
-  throw new Error(`Unsupported payout broker: ${broker}`);
-}
-
-function signalsBasePathForBroker(broker) {
-  const b = String(broker || "").toLowerCase();
-
-  if (b === "quotex") return "catalogadorquotex";
-  if (b === "iqoption") return "catalogadoriq";
-  if (b === "pocketoption" || b === "pocket") return "catalogadorpocket";
-
-  throw new Error(`Unsupported signals broker: ${broker}`);
-}
-
-function validatorPathForBroker(broker) {
-  const b = String(broker || "").toLowerCase();
-
-  if (b === "exnova" || b === "bullex" || b === "avalon") return "iqoption";
-  if (b === "quotex" || b === "iqoption") return b;
-  if (b === "pocketoption" || b === "pocket") return "pocket";
-
-  throw new Error(`Unsupported validator broker: ${broker}`);
-}
-
-function signalsStartUrl(env, broker) {
-  return `${stripSlash(env.API_BASE)}/${signalsBasePathForBroker(broker)}/catalog_signals_async`;
-}
-
-function signalsPollUrl(env, broker, id) {
-  return `${stripSlash(env.API_BASE)}/${signalsBasePathForBroker(broker)}/catalog_signals/${encodeURIComponent(id)}`;
-}
-
-function checkStartUrl(env, broker) {
-  return `${stripSlash(env.API_BASE)}/${validatorPathForBroker(broker)}/check`;
-}
-
-function checkPollUrl(env, broker, id) {
-  return `${stripSlash(env.API_BASE)}/${validatorPathForBroker(broker)}/check/${encodeURIComponent(id)}`;
-}
-
-async function sendTelegramMessage(env, text) {
-  const chunks = splitTelegramMessage(text, 3900);
-
-  for (const chunk of chunks) {
-    const res = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        chat_id: env.TELEGRAM_CHAT_ID,
-        text: chunk,
-        parse_mode: "HTML",
-        disable_web_page_preview: true,
-      }),
+    botToggle.addEventListener("change", async () => {
+      if (suppressToggleEvent || isBusy) return;
+      await setBotState(botToggle.checked);
     });
 
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data?.ok) {
-      throw new Error(`Telegram sendMessage failed: ${data?.description || `HTTP ${res.status}`}`);
-    }
-  }
-}
-
-function formatGeneratedTelegramMessage(cycle) {
-  const parsed = cycle.generatedSignals
-    .map(parseSignalRaw)
-    .filter(Boolean)
-    .sort((a, b) => compareSignalsByOutputTime(a, b, cycle));
-
-  const { allBrokers, otcOnly } = splitSignalsByMarket(parsed);
-  const dateLabel = outputDateFromServerIso(cycle.startServerIso);
-
-  const lines = [
-    "👑 MONEY TRADER ADVANCE SIGNALS 👑",
-    "                     ",
-    `📆 ${dateLabel} 📆`,
-    "",
-    `⏰ Timezone: UTC+${pad2(CONFIG.OUTPUT_TZ_HOURS)}:00 ⏰`,
-    `⏳ Timeframe: ${timeframeToMinutes(cycle.timeframe)} MINUTE ⏳`,
-    "",
-    "✅ 1 STEP MARTINGALE ✅ ",
-    "",
-    "🚀🚀🚀 ROCKET MONEY SHOTS 🚀🚀🚀",
-    "",
-  ];
-
-  if (allBrokers.length) {
-    lines.push("⭐️ ALL BROKERS ⭐️");
-    lines.push("");
-    lines.push(...allBrokers.map(sig => formatSignalLine(sig, false)));
-    lines.push("");
-  }
-
-  if (otcOnly.length) {
-    lines.push("💎 QUOTEX BROKER OTC ONLY 😊");
-    lines.push("");
-    lines.push(...otcOnly.map(sig => formatSignalLine(sig, false)));
-    lines.push("");
-  }
-
-  if (!allBrokers.length && !otcOnly.length) {
-    lines.push("NO SIGNALS RETURNED");
-    lines.push("");
-  }
-
-  lines.push("🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀");
-  lines.push("");
-  lines.push("");
-  lines.push("💵 Join our PREMIUM VIP For MORE, BETTER and NON MTG Signals.");
-  lines.push("");
-  lines.push("");
-  lines.push("🔥 HOW TO USE THESE SIGNALS? ⚠️");
-  lines.push("");
-  lines.push("⚠️ Avoid the signal if AGAINST RULES.");
-  lines.push('❗️<a href="https://t.me/AdvanceMoneySignals/6"> MUST READ PINNED POST SIGNAL RULES.</a> 🇧🇩');
-  lines.push("");
-  lines.push("🌟 Always try to use Marginal Safety.");
-  lines.push("✨ Following these rules gives you a 95% chance of profiting. 💯");
-  lines.push("");
-  lines.push("😬 To Sign up for your Broker Account:");
-  lines.push('🔗 <a href="https://market-qx.pro/sign-up/?lid=483872">Click Here</a> 🇧🇩');
-  lines.push('🔗 <a href="https://broker-qx.pro/sign-up/?lid=483872">Click Here</a> 🌍');
-  lines.push("");
-  lines.push("💬 Send your ACCOUNT ID 🚀 @JBTSupports to  JOIN ⚜️");
-
-  return lines.join("\n");
-}
-
-function formatValidationTelegramMessage(cycle) {
-  const parsed = cycle.validatedSignals
-    .map(parseSignalRaw)
-    .filter(Boolean)
-    .sort((a, b) => compareSignalsByOutputTime(a, b, cycle));
-
-  const { allBrokers, otcOnly } = splitSignalsByMarket(parsed);
-  const dateLabel = outputDateFromServerIso(cycle.startServerIso);
-
-  const lines = [
-    "🏆🏆🏆  RESULTS  🏆🏆🏆",
-    "",
-    `📆 ${dateLabel} 📆`,
-    " ",
-    `⏰ Timezone: UTC+${pad2(CONFIG.OUTPUT_TZ_HOURS)}:00 ⏰`,
-    `⏳ Timeframe: ${timeframeToMinutes(cycle.timeframe)} MINUTE ⏳`,
-    "",
-    "✅ 1 STEP MARTINGALE ✅ ",
-    "",
-    "🚀🚀🚀 ROCKET MONEY SHOTS 🚀🚀🚀",
-    "",
-  ];
-
-  if (allBrokers.length) {
-    lines.push("⭐️ ALL BROKERS");
-    lines.push("");
-    lines.push(...allBrokers.map(sig => formatSignalLine(sig, true).replace("⛔", "❎")));
-    lines.push("");
-  }
-
-  if (otcOnly.length) {
-    lines.push("💎 QUOTEX BROKER OTC ONLY: 😊");
-    lines.push("");
-    lines.push(...otcOnly.map(sig => formatSignalLine(sig, true).replace("⛔", "❎")));
-    lines.push("");
-  }
-
-  if (!allBrokers.length && !otcOnly.length) {
-    lines.push("NO VALIDATION DATA RETURNED");
-    lines.push("");
-  }
-
-  lines.push("🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀");
-  lines.push("");
-  lines.push("");
-  lines.push("💵 Join our PREMIUM VIP For MORE, BETTER and NON MTG Signals.");
-  lines.push("");
-  lines.push("");
-  lines.push("🔥 HOW TO USE THESE SIGNALS? ⚠️");
-  lines.push("");
-  lines.push("⚠️ Avoid the signal if AGAINST RULES.");
-  lines.push('❗️<a href="https://t.me/AdvanceMoneySignals/6"> MUST READ PINNED POST SIGNAL RULES.</a> 🇧🇩');
-  lines.push("");
-  lines.push("🌟 Always try to use Marginal Safety.");
-  lines.push("✨ Following these rules gives you a 95% chance of profiting. 💯");
-  lines.push("");
-  lines.push("😬 To Sign up for your Broker Account:");
-  lines.push('🔗 <a href="https://market-qx.pro/sign-up/?lid=483872">Click Here</a> 🇧🇩');
-  lines.push('🔗 <a href="https://broker-qx.pro/sign-up/?lid=483872">Click Here</a> 🌍');
-  lines.push("");
-  lines.push("💬 Send your ACCOUNT ID 🚀 @JBTSupports to  JOIN ⚜️");
-
-  return lines.join("\n");
-}
-
-function parseSignalRaw(sig) {
-  if (typeof sig !== "string") return null;
-  const p = sig.split(";").map(x => String(x).trim());
-  if (p.length < 4) return null;
-  return {
-    tf: p[0],
-    asset: p[1],
-    serverTime: p[2],
-    dir: p.slice(3).join(";"),
-    raw: sig,
-  };
-}
-
-function filterSignalsWithinWindow(signals, cycle) {
-  const startMin = hhmmToMinutes(cycle.startServerTime);
-  const endMin = hhmmToMinutes(cycle.endServerTime);
-  const overnight = cycle.startServerDate !== cycle.endServerDate;
-
-  return signals.filter(sig => {
-    const p = parseSignalRaw(sig);
-    if (!p) return false;
-
-    const mins = hhmmToMinutes(p.serverTime);
-    if (mins == null) return false;
-
-    if (mins % 10 === 0) return false;
-
-    if (!overnight) return mins >= startMin && mins <= endMin;
-    return mins >= startMin || mins <= endMin;
-  });
-}
-
-function groupSignalsByServerDate(signals, cycle) {
-  const out = {};
-  const startDate = cycle.startServerDate;
-  const endDate = cycle.endServerDate;
-  const startMin = hhmmToMinutes(cycle.startServerTime);
-  const overnight = startDate !== endDate;
-
-  for (const sig of signals) {
-    const p = parseSignalRaw(sig);
-    if (!p) continue;
-
-    let date = startDate;
-    const mins = hhmmToMinutes(p.serverTime);
-
-    if (overnight && mins < startMin) {
-      date = endDate;
-    }
-
-    if (!out[date]) out[date] = [];
-    out[date].push(sig);
-  }
-
-  return out;
-}
-
-function compareSignalsByOutputTime(a, b, cycle) {
-  const aMin = hhmmToMinutes(serverHHMMToOutputHHMM(a.serverTime));
-  const bMin = hhmmToMinutes(serverHHMMToOutputHHMM(b.serverTime));
-
-  const startOut = hhmmToMinutes(serverHHMMToOutputHHMM(cycle.startServerTime));
-  const endOut = hhmmToMinutes(serverHHMMToOutputHHMM(cycle.endServerTime));
-
-  return toRelativeMinutes(aMin, startOut, endOut) - toRelativeMinutes(bMin, startOut, endOut);
-}
-
-function normalizePairDisplay(asset) {
-  const raw = String(asset || "").trim();
-  let clean = raw.replace("-OTC", "");
-  if (clean.length === 6 && !clean.startsWith("#")) {
-    clean = clean.replace(/(\w{3})(\w{3})/, "$1/$2");
-  }
-  return clean + (raw.includes("OTC") ? " (OTC)" : "");
-}
-
-function isOtcAsset(asset) {
-  return /-OTC$/i.test(String(asset || "").trim());
-}
-
-function splitSignalsByMarket(parsedSignals) {
-  const allBrokers = [];
-  const otcOnly = [];
-
-  for (const sig of parsedSignals) {
-    if (isOtcAsset(sig.asset)) otcOnly.push(sig);
-    else allBrokers.push(sig);
-  }
-
-  return { allBrokers, otcOnly };
-}
-
-function formatSignalLine(sig, includeResultIcon = false) {
-  const timeOut = serverHHMMToOutputHHMM(sig.serverTime);
-  const dir = sig.dir.includes("CALL") ? "UP" : "DOWN";
-  const pair = normalizePairDisplay(sig.asset).padEnd(16, " ");
-
-  if (includeResultIcon) {
-    const icon = extractResultIcons(sig.dir);
-    return `${icon.padEnd(3, " ")} ${pair} ➙ ${timeOut} ➙ ${dir}`;
-  }
-
-  return `${pair} ➙ ${timeOut} ➙ ${dir}`;
-}
-
-function outputDateFromServerIso(serverIso) {
-  const utcMs = Date.parse(serverIso + "Z");
-  const p = partsAtOffset(utcMs, CONFIG.OUTPUT_TZ_HOURS);
-  return `${pad2(p.day)}/${pad2(p.month)}/${p.year}`;
-}
-
-function extractResultIcons(s) {
-  const text = String(s || "");
-    const icons = (text.match(/[✅⛔¹²³]/g) || []).join("").replace(/⛔/g, "❎");
-  if (icons) return icons;
-  if (/DOJI/i.test(text)) return "DOJI";
-  return "•";
-}
-
-function buildServerSegments(startParts, endParts) {
-  const start = hhmmFromParts(startParts);
-  const end = hhmmFromParts(endParts);
-
-  const sameDate =
-    startParts.year === endParts.year &&
-    startParts.month === endParts.month &&
-    startParts.day === endParts.day;
-
-  if (sameDate) {
-    return [{ start, end }];
-  }
-
-  return [
-    { start, end: "23:59" },
-    { start: "00:00", end },
-  ];
-}
-
-function serverHHMMToOutputHHMM(serverHHMM) {
-  const deltaHours = CONFIG.OUTPUT_TZ_HOURS - CONFIG.SERVER_TZ_HOURS;
-  return shiftHHMM(serverHHMM, deltaHours);
-}
-
-function serverIsoToOutputLabel(serverIso) {
-  const utcMs = Date.parse(serverIso + "Z");
-  const p = partsAtOffset(utcMs, CONFIG.OUTPUT_TZ_HOURS);
-  return `${p.year}-${pad2(p.month)}-${pad2(p.day)} ${pad2(p.hour)}:${pad2(p.minute)}`;
-}
-
-function shiftHHMM(hhmm, deltaHours) {
-  const m = String(hhmm || "").match(/^(\d{1,2}):(\d{2})$/);
-  if (!m) return hhmm;
-
-  const hh = Number(m[1]);
-  const mm = Number(m[2]);
-  const deltaMin = Math.round(Number(deltaHours) * 60);
-
-  let total = hh * 60 + mm + deltaMin;
-  total = ((total % 1440) + 1440) % 1440;
-
-  return `${pad2(Math.floor(total / 60))}:${pad2(total % 60)}`;
-}
-
-function hhmmToMinutes(str) {
-  const m = String(str || "").match(/^(\d{1,2}):(\d{2})$/);
-  if (!m) return null;
-  const hh = Number(m[1]);
-  const mm = Number(m[2]);
-  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
-  return hh * 60 + mm;
-}
-
-function toRelativeMinutes(mins, startMin, endMin) {
-  if (startMin == null || endMin == null) return mins;
-  if (startMin <= endMin) return mins;
-  return mins < startMin ? mins + 1440 : mins;
-}
-
-function partsAtOffset(utcMs, offsetHours) {
-  const shifted = new Date(utcMs + offsetHours * 60 * 60 * 1000);
-  return {
-    year: shifted.getUTCFullYear(),
-    month: shifted.getUTCMonth() + 1,
-    day: shifted.getUTCDate(),
-    hour: shifted.getUTCHours(),
-    minute: shifted.getUTCMinutes(),
-    second: shifted.getUTCSeconds(),
-  };
-}
-
-function isoAtOffset(utcMs, offsetHours) {
-  return isoFromParts(partsAtOffset(utcMs, offsetHours));
-}
-
-function isoFromParts(p) {
-  return `${p.year}-${pad2(p.month)}-${pad2(p.day)}T${pad2(p.hour)}:${pad2(p.minute)}:${pad2(p.second)}`;
-}
-
-function ymdFromParts(p) {
-  return `${p.year}-${pad2(p.month)}-${pad2(p.day)}`;
-}
-
-function hhmmFromParts(p) {
-  return `${pad2(p.hour)}:${pad2(p.minute)}`;
-}
-
-function serverSlotKey(utcMs) {
-  const p = partsAtOffset(utcMs, CONFIG.SERVER_TZ_HOURS);
-  return `${p.year}${pad2(p.month)}${pad2(p.day)}-${pad2(p.hour)}${pad2(p.minute)}`;
-}
-
-function timeframeToMinutes(tf) {
-  const v = String(tf || "").toUpperCase();
-  if (v === "M1") return 1;
-  if (v === "M5") return 5;
-  if (v === "M15") return 15;
-  if (v === "M30") return 30;
-  if (v === "H1") return 60;
-  return 1;
-}
-
-function normalizeValidatorBroker(broker) {
-  const b = String(broker || "").toLowerCase();
-  if (b === "exnova" || b === "bullex" || b === "avalon") return "iqoption";
-  return b;
-}
-
-async function cleanupOldCycles(env, nowUtcMs) {
-  const list = await env.STATE_KV.list({ prefix: "cycle:" });
-  const cutoff = nowUtcMs - CONFIG.CLEANUP_AFTER_HOURS * 60 * 60 * 1000;
-
-  for (const entry of list.keys) {
-    const cycle = await env.STATE_KV.get(entry.name, "json");
-    if (!cycle?.createdAtUtc) continue;
-    const created = Date.parse(cycle.createdAtUtc);
-    if (Number.isFinite(created) && created < cutoff) {
-      await env.STATE_KV.delete(entry.name);
-    }
-  }
-}
-
-function splitTelegramMessage(text, maxLen) {
-  const lines = String(text || "").split("\n");
-  const chunks = [];
-  let current = "";
-
-  for (const line of lines) {
-    const candidate = current ? `${current}\n${line}` : line;
-    if (candidate.length <= maxLen) {
-      current = candidate;
-    } else {
-      if (current) chunks.push(current);
-      current = line;
-    }
-  }
-
-  if (current) chunks.push(current);
-  return chunks.length ? chunks : [""];
-}
-
-function stripSlash(s) {
-  return String(s || "").replace(/\/+$/, "");
-}
-
-function pad2(n) {
-  return String(n).padStart(2, "0");
-}
-
-function json(obj, status = 200) {
-  return new Response(JSON.stringify(obj, null, 2), {
-    status,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-    },
-  });
-}
+    getStatus();
+  </script>
+</body>
+</html>
