@@ -307,6 +307,63 @@
       font-size:12px;
       line-height:1.45;
     }
+
+        .runtime-box{
+      padding:16px 18px;
+      border-radius:20px;
+      background:rgba(255,255,255,.035);
+      border:1px solid var(--line);
+      margin-bottom:16px;
+    }
+
+    .runtime-grid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:12px;
+    }
+
+    .runtime-row{
+      display:grid;
+      grid-template-columns:1fr 110px;
+      gap:12px;
+      align-items:center;
+      padding:12px 14px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.03);
+    }
+
+    .runtime-copy h4{
+      margin:0 0 4px;
+      font-size:14px;
+    }
+
+    .runtime-copy p{
+      margin:0;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.45;
+    }
+
+    .runtime-input{
+      width:100%;
+      border:none;
+      outline:none;
+      border-radius:12px;
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      padding:10px 12px;
+      font-size:14px;
+      font-weight:700;
+      text-align:right;
+    }
+
+    .runtime-actions{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:10px;
+      margin-top:12px;
+    }
     
     .toggle-copy h3{margin:0 0 4px;font-size:16px}
     .toggle-copy p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
@@ -600,6 +657,40 @@
                 </div>
               </div>
             </div>
+
+                        <div class="runtime-box">
+              <div class="filters-title">Generation / Validation Window</div>
+
+              <div class="runtime-grid">
+                <div class="runtime-row">
+                  <div class="runtime-copy">
+                    <h4>Signal Start Delay</h4>
+                    <p>Minutes after current slot before generation window starts.</p>
+                  </div>
+                  <input class="runtime-input" type="number" min="0" step="1" data-runtime-start-delay="${bot.key}" value="2">
+                </div>
+
+                <div class="runtime-row">
+                  <div class="runtime-copy">
+                    <h4>Signal Window</h4>
+                    <p>Generation window size in minutes.</p>
+                  </div>
+                  <input class="runtime-input" type="number" min="1" step="1" data-runtime-signal-window="${bot.key}" value="5">
+                </div>
+
+                <div class="runtime-row">
+                  <div class="runtime-copy">
+                    <h4>Validation Delay</h4>
+                    <p>Minutes after signal window before validation starts.</p>
+                  </div>
+                  <input class="runtime-input" type="number" min="0" step="1" data-runtime-validation-delay="${bot.key}" value="3">
+                </div>
+              </div>
+
+              <div class="runtime-actions">
+                <button class="ghost" data-runtime-save="${bot.key}">Save Window Settings</button>
+              </div>
+            </div>
             
             <div class="stats-grid">
               <div class="stat">
@@ -668,6 +759,10 @@
         `[data-filter-timezone="${key}"]`,
         `[data-filter-news="${key}"]`,
         `[data-filter-trend="${key}"]`
+                `[data-runtime-start-delay="${key}"]`,
+        `[data-runtime-signal-window="${key}"]`,
+        `[data-runtime-validation-delay="${key}"]`,
+        `[data-runtime-save="${key}"]`
       ];
       selectors.forEach(sel => {
         const el = document.querySelector(sel);
@@ -698,6 +793,14 @@
       if (timezoneToggle) timezoneToggle.checked = filters?.timezone?.enabled === true;
       if (newsToggle) newsToggle.checked = filters?.news?.enabled === true;
       if (trendToggle) trendToggle.checked = filters?.trend?.enabled === true;
+            const runtimeConfig = data.runtimeConfig || {};
+      const startDelayInput = document.querySelector(`[data-runtime-start-delay="${bot.key}"]`);
+      const signalWindowInput = document.querySelector(`[data-runtime-signal-window="${bot.key}"]`);
+      const validationDelayInput = document.querySelector(`[data-runtime-validation-delay="${bot.key}"]`);
+
+      if (startDelayInput) startDelayInput.value = String(runtimeConfig.signalStartDelayMinutes ?? 2);
+      if (signalWindowInput) signalWindowInput.value = String(runtimeConfig.signalWindowMinutes ?? 5);
+      if (validationDelayInput) validationDelayInput.value = String(runtimeConfig.validationDelayMinutes ?? 3);
 
       if (enabled) {
         pill.className = "pill online";
@@ -754,6 +857,13 @@
       if (timezoneToggle) timezoneToggle.checked = false;
       if (newsToggle) newsToggle.checked = false;
       if (trendToggle) trendToggle.checked = false;
+            const startDelayInput = document.querySelector(`[data-runtime-start-delay="${bot.key}"]`);
+      const signalWindowInput = document.querySelector(`[data-runtime-signal-window="${bot.key}"]`);
+      const validationDelayInput = document.querySelector(`[data-runtime-validation-delay="${bot.key}"]`);
+
+      if (startDelayInput) startDelayInput.value = "—";
+      if (signalWindowInput) signalWindowInput.value = "—";
+      if (validationDelayInput) validationDelayInput.value = "—";
       meta.textContent = message || "Request failed";
     }
 
@@ -821,6 +931,39 @@
       }
     }
 
+        async function saveRuntime(bot) {
+      setBusy(bot.key, true);
+      try {
+        const signalStartDelayMinutes = Number(document.querySelector(`[data-runtime-start-delay="${bot.key}"]`)?.value || 0);
+        const signalWindowMinutes = Number(document.querySelector(`[data-runtime-signal-window="${bot.key}"]`)?.value || 0);
+        const validationDelayMinutes = Number(document.querySelector(`[data-runtime-validation-delay="${bot.key}"]`)?.value || 0);
+
+        const res = await fetch(`${bot.url}/runtime`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "accept": "application/json"
+          },
+          body: JSON.stringify({
+            signalStartDelayMinutes,
+            signalWindowMinutes,
+            validationDelayMinutes
+          })
+        });
+
+        const data = await safeJson(res);
+        if (!res.ok) throw new Error(data.error || data.raw || `HTTP ${res.status}`);
+
+        log(bot.key, `Runtime window updated.`);
+        await fetchMeta(bot);
+      } catch (err) {
+        log(bot.key, `Runtime update failed: ${err.message || String(err)}`);
+        applyUnknown(bot, err.message || String(err));
+      } finally {
+        setBusy(bot.key, false);
+      }
+    }
+    
     async function pingBot(bot) {
       setBusy(bot.key, true);
       try {
@@ -861,6 +1004,7 @@
             document.querySelector(`[data-filter-timezone="${bot.key}"]`).addEventListener("change", (e) => setFilter(bot, "timezone", e.target.checked));
       document.querySelector(`[data-filter-news="${bot.key}"]`).addEventListener("change", (e) => setFilter(bot, "news", e.target.checked));
       document.querySelector(`[data-filter-trend="${bot.key}"]`).addEventListener("change", (e) => setFilter(bot, "trend", e.target.checked));
+            document.querySelector(`[data-runtime-save="${bot.key}"]`).addEventListener("click", () => saveRuntime(bot));
     });
 
     async function refreshAll() {
