@@ -364,6 +364,18 @@
       gap:10px;
       margin-top:12px;
     }
+
+        .runtime-toggle-row{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:16px;
+      padding:12px 14px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.03);
+      margin-bottom:12px;
+    }
     
     .toggle-copy h3{margin:0 0 4px;font-size:16px}
     .toggle-copy p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
@@ -660,6 +672,16 @@
 
                         <div class="runtime-box">
               <div class="filters-title">Generation / Validation Window</div>
+                            <div class="runtime-toggle-row">
+                <div class="runtime-copy">
+                  <h4>Generate Only Estável Window</h4>
+                  <p>Auto-fetch the server timezone map and only generate during Estável time.</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" data-runtime-stable-only="${bot.key}">
+                  <span class="slider"></span>
+                </label>
+              </div>
 
               <div class="runtime-grid">
                 <div class="runtime-row">
@@ -763,6 +785,7 @@
         `[data-runtime-signal-window="${key}"]`,
         `[data-runtime-validation-delay="${key}"]`,
         `[data-runtime-save="${key}"]`
+                `[data-runtime-stable-only="${key}"]`,
       ];
       selectors.forEach(sel => {
         const el = document.querySelector(sel);
@@ -797,10 +820,12 @@
       const startDelayInput = document.querySelector(`[data-runtime-start-delay="${bot.key}"]`);
       const signalWindowInput = document.querySelector(`[data-runtime-signal-window="${bot.key}"]`);
       const validationDelayInput = document.querySelector(`[data-runtime-validation-delay="${bot.key}"]`);
+            const stableOnlyToggle = document.querySelector(`[data-runtime-stable-only="${bot.key}"]`);
 
       if (startDelayInput) startDelayInput.value = String(runtimeConfig.signalStartDelayMinutes ?? 2);
       if (signalWindowInput) signalWindowInput.value = String(runtimeConfig.signalWindowMinutes ?? 5);
       if (validationDelayInput) validationDelayInput.value = String(runtimeConfig.validationDelayMinutes ?? 3);
+            if (stableOnlyToggle) stableOnlyToggle.checked = runtimeConfig.stableOnlyEnabled === true;
 
       if (enabled) {
         pill.className = "pill online";
@@ -860,10 +885,12 @@
             const startDelayInput = document.querySelector(`[data-runtime-start-delay="${bot.key}"]`);
       const signalWindowInput = document.querySelector(`[data-runtime-signal-window="${bot.key}"]`);
       const validationDelayInput = document.querySelector(`[data-runtime-validation-delay="${bot.key}"]`);
+            const stableOnlyToggle = document.querySelector(`[data-runtime-stable-only="${bot.key}"]`);
 
       if (startDelayInput) startDelayInput.value = "—";
       if (signalWindowInput) signalWindowInput.value = "—";
       if (validationDelayInput) validationDelayInput.value = "—";
+            if (stableOnlyToggle) stableOnlyToggle.checked = false;
       meta.textContent = message || "Request failed";
     }
 
@@ -931,12 +958,13 @@
       }
     }
 
-        async function saveRuntime(bot) {
+    async function saveRuntime(bot) {
       setBusy(bot.key, true);
       try {
         const signalStartDelayMinutes = Number(document.querySelector(`[data-runtime-start-delay="${bot.key}"]`)?.value || 0);
         const signalWindowMinutes = Number(document.querySelector(`[data-runtime-signal-window="${bot.key}"]`)?.value || 0);
         const validationDelayMinutes = Number(document.querySelector(`[data-runtime-validation-delay="${bot.key}"]`)?.value || 0);
+        const stableOnlyEnabled = document.querySelector(`[data-runtime-stable-only="${bot.key}"]`)?.checked === true;
 
         const res = await fetch(`${bot.url}/runtime`, {
           method: "POST",
@@ -947,7 +975,8 @@
           body: JSON.stringify({
             signalStartDelayMinutes,
             signalWindowMinutes,
-            validationDelayMinutes
+            validationDelayMinutes,
+            stableOnlyEnabled
           })
         });
 
