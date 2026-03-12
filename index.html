@@ -382,6 +382,67 @@
           </div>
         </div>
 
+                <div class="glass card">
+          <h2>Filter Controls</h2>
+          <p class="meta">Save post-generation filter settings to the Worker.</p>
+
+          <div class="controls">
+            <button class="btn-green" onclick="setToggle('longTrendEnabled', true)">Long Trend ON</button>
+            <button class="btn-red" onclick="setToggle('longTrendEnabled', false)">Long Trend OFF</button>
+
+            <button class="btn-green" onclick="setToggle('ttzEnabled', true)">TTZ ON</button>
+            <button class="btn-red" onclick="setToggle('ttzEnabled', false)">TTZ OFF</button>
+
+            <button class="btn-green" onclick="setToggle('newsEnabled', true)">News ON</button>
+            <button class="btn-red" onclick="setToggle('newsEnabled', false)">News OFF</button>
+
+            <button class="btn-green" onclick="setToggle('candleHistoryEnabled', true)">Candle History ON</button>
+            <button class="btn-red" onclick="setToggle('candleHistoryEnabled', false)">Candle History OFF</button>
+          </div>
+
+          <div class="kv-grid" style="margin-top:12px;">
+            <div class="mini">
+              <div class="label">Long Trend EMA</div>
+              <input id="cfgLongTrendEma" type="number" value="200" />
+            </div>
+
+            <div class="mini">
+              <div class="label">TTZ Mode</div>
+              <select id="cfgTtzMode">
+                <option value="normal" selected>Normal</option>
+                <option value="stable-only">Only Stable-Period Trading</option>
+              </select>
+            </div>
+
+            <div class="mini">
+              <div class="label">TTZ Stable Lead</div>
+              <input id="cfgTtzLead" type="number" value="10" />
+            </div>
+
+            <div class="mini">
+              <div class="label">TTZ Period Minutes</div>
+              <input id="cfgTtzLimit" type="number" placeholder="blank = full stable range" />
+            </div>
+
+            <div class="mini">
+              <div class="label">News Impact</div>
+              <select id="cfgNewsImpact">
+                <option value="3" selected>3 Star Only</option>
+              </select>
+            </div>
+
+            <div class="mini">
+              <div class="label">News Window Minutes</div>
+              <input id="cfgNewsWindow" type="number" value="30" />
+            </div>
+          </div>
+
+          <div class="actions" style="margin-top:12px;">
+            <button class="btn-blue" onclick="loadFilterConfig()">Load Filter Config</button>
+            <button class="btn-amber" onclick="saveFilterConfig()">Save Filter Config</button>
+          </div>
+        </div>
+
         <div class="glass card">
           <h2>Ops Actions</h2>
           <p class="meta">Run checks and diagnostics.</p>
@@ -425,6 +486,22 @@
     const BASE_URL = "https://livebot.themrmillion.workers.dev";
 
     document.getElementById("workerHost").textContent = new URL(BASE_URL).host;
+        let FILTER_CONFIG = {
+      longTrendEnabled: false,
+      longTrendBroker: "quotex",
+      longTrendEmaPeriod: 200,
+      ttzEnabled: false,
+      ttzLevelsPt: ["Perigoso", "Muito Alto", "Alto", "Moderado", "Baixo", "Muito Baixo"],
+      ttzOnlyStablePeriod: false,
+      ttzStableLeadMinutes: 10,
+      ttzPeriodLimitMinutes: null,
+      newsEnabled: false,
+      newsImpactLevels: [3],
+      newsDay: "today",
+      newsWindowMinutes: 30,
+      candleHistoryEnabled: false,
+      candleHistoryBroker: "quotex"
+    };
 
     function setConnectionState(text, tone = "idle") {
       const el = document.getElementById("connectionState");
@@ -523,7 +600,88 @@
         setConnectionState("Fetch Failed", "bad");
       }
     }
+    function setToggle(key, value) {
+      FILTER_CONFIG[key] = value;
+      document.getElementById("output").textContent = JSON.stringify(FILTER_CONFIG, null, 2);
+    }
 
+    async function loadFilterConfig() {
+      const output = document.getElementById("output");
+      const statusText = document.getElementById("statusText");
+
+      output.textContent = "Loading config...";
+      statusText.innerHTML = '<span class="warn">Loading filter config...</span>';
+
+      try {
+        const res = await fetch(BASE_URL + "/config", {
+          method: "GET",
+          mode: "cors",
+          headers: { "Accept": "application/json" }
+        });
+
+        const data = await res.json();
+        if (!data.ok) throw new Error("Config load failed");
+
+        FILTER_CONFIG = data.config || FILTER_CONFIG;
+
+        document.getElementById("cfgLongTrendEma").value = FILTER_CONFIG.longTrendEmaPeriod ?? 200;
+        document.getElementById("cfgTtzMode").value = FILTER_CONFIG.ttzOnlyStablePeriod ? "stable-only" : "normal";
+        document.getElementById("cfgTtzLead").value = FILTER_CONFIG.ttzStableLeadMinutes ?? 10;
+        document.getElementById("cfgTtzLimit").value = FILTER_CONFIG.ttzPeriodLimitMinutes ?? "";
+        document.getElementById("cfgNewsImpact").value = String((FILTER_CONFIG.newsImpactLevels || [3])[0] || 3);
+        document.getElementById("cfgNewsWindow").value = FILTER_CONFIG.newsWindowMinutes ?? 30;
+
+        output.textContent = JSON.stringify(data, null, 2);
+        statusText.innerHTML = '<span class="ok">Filter config loaded</span>';
+      } catch (err) {
+        output.textContent = String(err);
+        statusText.innerHTML = '<span class="bad">Error</span>: ' + String(err);
+      }
+    }
+
+    async function saveFilterConfig() {
+      const output = document.getElementById("output");
+      const statusText = document.getElementById("statusText");
+
+      FILTER_CONFIG.longTrendEmaPeriod = Number(document.getElementById("cfgLongTrendEma").value || 200);
+      FILTER_CONFIG.ttzOnlyStablePeriod = document.getElementById("cfgTtzMode").value === "stable-only";
+      FILTER_CONFIG.ttzStableLeadMinutes = Number(document.getElementById("cfgTtzLead").value || 10);
+
+      const ttzLimitRaw = document.getElementById("cfgTtzLimit").value.trim();
+      FILTER_CONFIG.ttzPeriodLimitMinutes = ttzLimitRaw === "" ? null : Number(ttzLimitRaw);
+
+      FILTER_CONFIG.newsImpactLevels = [Number(document.getElementById("cfgNewsImpact").value || 3)];
+      FILTER_CONFIG.newsWindowMinutes = Number(document.getElementById("cfgNewsWindow").value || 30);
+
+      output.textContent = "Saving config...";
+      statusText.innerHTML = '<span class="warn">Saving filter config...</span>';
+
+      try {
+        const res = await fetch(BASE_URL + "/config", {
+          method: "POST",
+          mode: "cors",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify(FILTER_CONFIG)
+        });
+
+        const data = await res.json();
+        output.textContent = JSON.stringify(data, null, 2);
+
+        if (data.ok) {
+          statusText.innerHTML = '<span class="ok">Filter config saved</span>';
+        } else {
+          statusText.innerHTML = '<span class="bad">Failed to save config</span>';
+        }
+      } catch (err) {
+        output.textContent = String(err);
+        statusText.innerHTML = '<span class="bad">Error</span>: ' + String(err);
+      }
+    }
+
+    loadFilterConfig();
     loadStatus();
   </script>
 </body>
