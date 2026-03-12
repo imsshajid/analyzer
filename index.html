@@ -3,1045 +3,175 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bot Nexus Control</title>
+  <title>Bot Control Panel</title>
   <style>
-    :root{
-      --bg:#05060a;
-      --bg2:#0a0e17;
-      --glass:rgba(17,20,31,.52);
-      --glass-2:rgba(255,255,255,.06);
-      --line:rgba(255,255,255,.09);
-      --line-2:rgba(255,255,255,.14);
-      --text:#eef2ff;
-      --muted:#95a2c2;
-      --good:#12d18e;
-      --bad:#ff4d78;
-      --warn:#ffbf47;
-      --blue:#6f7cff;
-      --cyan:#00d5ff;
-      --violet:#a855f7;
-      --shadow:0 24px 80px rgba(0,0,0,.45);
-      --radius-xl:28px;
-      --radius-lg:22px;
-      --radius-md:18px;
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      margin: 0;
+      padding: 24px;
     }
 
-    *{box-sizing:border-box}
-    html,body{margin:0;min-height:100%}
-    body{
-      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-      color:var(--text);
-      background:
-        radial-gradient(1200px 700px at 10% 0%, rgba(111,124,255,.17), transparent 40%),
-        radial-gradient(900px 600px at 100% 100%, rgba(0,213,255,.12), transparent 34%),
-        linear-gradient(180deg,var(--bg),var(--bg2));
-      overflow-x:hidden;
+    .wrap {
+      max-width: 760px;
+      margin: 0 auto;
     }
 
-    .grid-bg{
-      position:fixed; inset:0; pointer-events:none; z-index:-2;
-      background-image:
-        linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
-      background-size:38px 38px;
-      mask-image:radial-gradient(circle at center, black 30%, transparent 85%);
-      -webkit-mask-image:radial-gradient(circle at center, black 30%, transparent 85%);
+    h1 {
+      margin-bottom: 8px;
     }
 
-    .orb{
-      position:fixed; border-radius:999px; filter:blur(90px); opacity:.35; pointer-events:none; z-index:-3;
-    }
-    .orb.a{width:420px;height:420px;background:linear-gradient(135deg,#7c3aed,#2563eb);top:-110px;left:-70px;animation:floatA 18s ease-in-out infinite}
-    .orb.b{width:360px;height:360px;background:linear-gradient(135deg,#00d5ff,#12d18e);bottom:-80px;right:-50px;animation:floatB 22s ease-in-out infinite}
-    .orb.c{width:260px;height:260px;background:linear-gradient(135deg,#ff4d78,#a855f7);top:40%;left:50%;animation:floatC 20s ease-in-out infinite}
-
-    @keyframes floatA{0%,100%{transform:translate(0,0)}50%{transform:translate(40px,26px)}}
-    @keyframes floatB{0%,100%{transform:translate(0,0)}50%{transform:translate(-36px,-22px)}}
-    @keyframes floatC{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-46%,-56%) scale(1.08)}}
-
-    .wrap{
-      max-width:1440px;
-      margin:0 auto;
-      padding:28px 20px 34px;
+    p {
+      color: #94a3b8;
     }
 
-    .hero{
-      position:relative;
-      overflow:hidden;
-      border:1px solid var(--line);
-      background:
-        linear-gradient(145deg, rgba(20,24,38,.72), rgba(10,12,20,.70)),
-        linear-gradient(180deg, rgba(255,255,255,.04), transparent);
-      backdrop-filter:blur(26px) saturate(145%);
-      -webkit-backdrop-filter:blur(26px) saturate(145%);
-      border-radius:var(--radius-xl);
-      box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.08);
-      padding:30px 28px 24px;
-      margin-bottom:20px;
+    .card {
+      background: #111827;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 18px;
+      margin-top: 18px;
     }
 
-    .hero::before{
-      content:"";
-      position:absolute; inset:0;
-      background:
-        radial-gradient(circle at top right, rgba(255,255,255,.10), transparent 28%),
-        linear-gradient(120deg, rgba(255,255,255,.07), transparent 30%, transparent 70%, rgba(255,255,255,.04));
-      pointer-events:none;
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
     }
 
-    .hero-top{
-      display:flex;
-      justify-content:space-between;
-      gap:18px;
-      align-items:flex-start;
-      flex-wrap:wrap;
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      color: white;
     }
 
-    .kicker{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:7px 14px;
-      border-radius:999px;
-      background:rgba(255,255,255,.05);
-      border:1px solid var(--line);
-      color:var(--muted);
-      font-size:12px;
-      letter-spacing:.12em;
-      text-transform:uppercase;
-      font-weight:700;
+    .green { background: #16a34a; }
+    .red { background: #dc2626; }
+    .blue { background: #2563eb; }
+    .gray { background: #475569; }
+
+    pre {
+      background: #020617;
+      color: #cbd5e1;
+      padding: 14px;
+      border-radius: 10px;
+      overflow: auto;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-break: break-word;
     }
 
-    .kicker .pulse{
-      width:8px; height:8px; border-radius:999px; background:var(--cyan);
-      box-shadow:0 0 18px var(--cyan);
+    .status-box {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 10px;
+      background: #1e293b;
+      border: 1px solid #334155;
     }
 
-    h1{
-      margin:18px 0 10px;
-      font-size:clamp(2rem,4vw,3.7rem);
-      line-height:1;
-      letter-spacing:-.05em;
-      font-weight:900;
-      background:linear-gradient(90deg,#fff,#dbe7ff 40%,#93c5fd 100%);
-      -webkit-background-clip:text;
-      -webkit-text-fill-color:transparent;
-    }
-
-    .sub{
-      max-width:72ch;
-      margin:0;
-      color:var(--muted);
-      line-height:1.7;
-      font-size:15px;
-    }
-
-    .hero-stats{
-      display:grid;
-      grid-template-columns:repeat(4,minmax(0,1fr));
-      gap:14px;
-      margin-top:24px;
-    }
-
-    .hero-stat{
-      padding:18px;
-      border-radius:20px;
-      background:rgba(255,255,255,.04);
-      border:1px solid var(--line);
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
-    }
-
-    .hero-stat .label{
-      color:var(--muted);
-      text-transform:uppercase;
-      font-size:11px;
-      letter-spacing:.12em;
-      font-weight:700;
-      margin-bottom:8px;
-    }
-
-    .hero-stat .value{
-      font-size:24px;
-      font-weight:900;
-      letter-spacing:-.04em;
-    }
-
-    .panel{
-      display:grid;
-      grid-template-columns:repeat(3,minmax(0,1fr));
-      gap:18px;
-    }
-
-    .bot-card{
-      position:relative;
-      overflow:hidden;
-      border-radius:var(--radius-xl);
-      border:1px solid var(--line);
-      background:
-        linear-gradient(145deg, rgba(18,22,34,.76), rgba(8,10,18,.75)),
-        linear-gradient(180deg, rgba(255,255,255,.03), transparent);
-      backdrop-filter:blur(26px) saturate(150%);
-      -webkit-backdrop-filter:blur(26px) saturate(150%);
-      box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.06);
-    }
-
-    .bot-card::before{
-      content:"";
-      position:absolute; inset:0 0 auto 0; height:2px;
-      background:linear-gradient(90deg, transparent, var(--accent), transparent);
-      opacity:.9;
-    }
-
-    .bot-inner{padding:22px}
-
-    .bot-head{
-      display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px;
-    }
-
-    .bot-title{
-      display:flex; align-items:center; gap:12px; min-width:0;
-    }
-
-    .bot-logo{
-      width:44px; height:44px; border-radius:16px;
-      background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 70%, white 0%), rgba(255,255,255,.06));
-      border:1px solid rgba(255,255,255,.10);
-      box-shadow:0 0 24px color-mix(in srgb, var(--accent) 25%, transparent);
-      display:grid; place-items:center; font-weight:900;
-    }
-
-    .bot-name{
-      font-size:19px; font-weight:800; letter-spacing:-.03em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
-
-    .bot-url{
-      font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:210px;
-    }
-
-    .pill{
-      padding:8px 12px; border-radius:999px; font-size:11px; font-weight:900; letter-spacing:.12em; text-transform:uppercase;
-      border:1px solid var(--line-2);
-    }
-    .pill.online{background:rgba(18,209,142,.14); color:#c9ffe9; border-color:rgba(18,209,142,.32)}
-    .pill.offline{background:rgba(255,77,120,.14); color:#ffd4df; border-color:rgba(255,77,120,.32)}
-    .pill.unknown{background:rgba(255,191,71,.14); color:#ffe7b3; border-color:rgba(255,191,71,.30)}
-
-    .status-shell{
-      padding:18px;
-      border-radius:20px;
-      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-      border:1px solid var(--line);
-      margin-bottom:16px;
-    }
-
-    .status-line{
-      display:flex; align-items:center; gap:12px; margin-bottom:8px;
-    }
-
-    .dot{
-      width:14px; height:14px; border-radius:999px;
-    }
-    .dot.online{background:var(--good); box-shadow:0 0 0 0 rgba(18,209,142,.35); animation:pulseG 2s infinite}
-    .dot.offline{background:var(--bad); box-shadow:0 0 18px rgba(255,77,120,.45)}
-    .dot.unknown{background:var(--warn); box-shadow:0 0 0 0 rgba(255,191,71,.35); animation:pulseY 2s infinite}
-    @keyframes pulseG{70%{box-shadow:0 0 0 12px rgba(18,209,142,0)}100%{box-shadow:0 0 0 0 rgba(18,209,142,0)}}
-    @keyframes pulseY{70%{box-shadow:0 0 0 12px rgba(255,191,71,0)}100%{box-shadow:0 0 0 0 rgba(255,191,71,0)}}
-
-    .state{
-      font-size:24px; font-weight:900; letter-spacing:-.03em;
-    }
-
-    .meta{
-      color:var(--muted); font-size:13px; line-height:1.65; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-      word-break:break-word;
-    }
-
-    .toggle-row{
-      display:flex; justify-content:space-between; gap:16px; align-items:center;
-      padding:16px 18px;
-      border-radius:20px;
-      background:rgba(255,255,255,.035);
-      border:1px solid var(--line);
-      margin-bottom:16px;
-    }
-
-        .filters-box{
-      padding:16px 18px;
-      border-radius:20px;
-      background:rgba(255,255,255,.035);
-      border:1px solid var(--line);
-      margin-bottom:16px;
-    }
-
-    .filters-title{
-      margin:0 0 12px;
-      font-size:16px;
-      font-weight:800;
-    }
-
-    .filter-list{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:12px;
-    }
-
-    .filter-item{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:16px;
-      padding:12px 14px;
-      border-radius:16px;
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.03);
-    }
-
-    .filter-copy h4{
-      margin:0 0 4px;
-      font-size:14px;
-    }
-
-    .filter-copy p{
-      margin:0;
-      color:var(--muted);
-      font-size:12px;
-      line-height:1.45;
-    }
-
-        .runtime-box{
-      padding:16px 18px;
-      border-radius:20px;
-      background:rgba(255,255,255,.035);
-      border:1px solid var(--line);
-      margin-bottom:16px;
-    }
-
-    .runtime-grid{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:12px;
-    }
-
-    .runtime-row{
-      display:grid;
-      grid-template-columns:1fr 110px;
-      gap:12px;
-      align-items:center;
-      padding:12px 14px;
-      border-radius:16px;
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.03);
-    }
-
-    .runtime-copy h4{
-      margin:0 0 4px;
-      font-size:14px;
-    }
-
-    .runtime-copy p{
-      margin:0;
-      color:var(--muted);
-      font-size:12px;
-      line-height:1.45;
-    }
-
-    .runtime-input{
-      width:100%;
-      border:none;
-      outline:none;
-      border-radius:12px;
-      background:rgba(255,255,255,.06);
-      color:var(--text);
-      padding:10px 12px;
-      font-size:14px;
-      font-weight:700;
-      text-align:right;
-    }
-
-    .runtime-actions{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:10px;
-      margin-top:12px;
-    }
-
-        .runtime-toggle-row{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:16px;
-      padding:12px 14px;
-      border-radius:16px;
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.03);
-      margin-bottom:12px;
-    }
-    
-    .toggle-copy h3{margin:0 0 4px;font-size:16px}
-    .toggle-copy p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
-
-    .switch{position:relative;width:74px;height:40px;flex:0 0 auto}
-    .switch input{opacity:0;width:0;height:0}
-    .slider{
-      position:absolute; inset:0; cursor:pointer; border-radius:999px;
-      background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.10);
-      box-shadow:inset 0 3px 8px rgba(0,0,0,.35);
-      transition:.3s ease;
-    }
-    .slider::before{
-      content:""; position:absolute; width:30px; height:30px; left:4px; top:4px; border-radius:999px;
-      background:linear-gradient(180deg,#fff,#dbe3ff);
-      box-shadow:0 8px 20px rgba(0,0,0,.30);
-      transition:.3s ease;
-    }
-    .switch input:checked + .slider{
-      background:color-mix(in srgb, var(--accent) 85%, rgba(255,255,255,.08));
-      border-color:color-mix(in srgb, var(--accent) 75%, white 10%);
-      box-shadow:0 0 18px color-mix(in srgb, var(--accent) 30%, transparent), inset 0 3px 8px rgba(0,0,0,.18);
-    }
-    .switch input:checked + .slider::before{transform:translateX(34px)}
-
-    .stats-grid{
-      display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:14px;
-    }
-
-    .stat{
-      padding:14px;
-      border-radius:18px;
-      background:rgba(255,255,255,.035);
-      border:1px solid var(--line);
-    }
-
-    .stat .label{
-      color:var(--muted);
-      font-size:11px;
-      text-transform:uppercase;
-      letter-spacing:.12em;
-      font-weight:800;
-      margin-bottom:7px;
-    }
-
-    .stat .value{
-      font-size:20px; font-weight:900; letter-spacing:-.04em;
-    }
-
-    .kv-grid{
-      display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-bottom:14px;
-    }
-
-    .kv{
-      padding:12px 13px;
-      border-radius:16px;
-      background:rgba(255,255,255,.03);
-      border:1px solid var(--line);
-    }
-
-    .kv .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:800}
-    .kv .v{margin-top:6px;font-size:18px;font-weight:900;letter-spacing:-.03em}
-    .kv .s{margin-top:4px;font-size:12px;color:var(--muted)}
-
-    .actions{
-      display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;
-    }
-
-    button{
-      appearance:none; border:none; cursor:pointer; border-radius:16px; padding:13px 14px;
-      font-weight:800; color:#fff; transition:.2s ease; font-size:14px;
-      position:relative; overflow:hidden;
-    }
-    button:hover{transform:translateY(-2px)}
-    button:active{transform:translateY(0)}
-    button:disabled{opacity:.55;cursor:not-allowed;transform:none}
-    .primary{
-      background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 84%, white 0%), color-mix(in srgb, var(--accent) 56%, black 12%));
-      box-shadow:0 12px 28px color-mix(in srgb, var(--accent) 28%, transparent), inset 0 1px 0 rgba(255,255,255,.18);
-    }
-    .danger{
-      background:linear-gradient(135deg,#ff4d78,#db2f63);
-      box-shadow:0 12px 28px rgba(255,77,120,.24), inset 0 1px 0 rgba(255,255,255,.18);
-    }
-    .ghost{
-      background:rgba(255,255,255,.05);
-      border:1px solid var(--line);
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
-    }
-
-    .log{
-      min-height:116px; max-height:180px; overflow:auto;
-      padding:14px 15px;
-      border-radius:18px;
-      background:#02040a;
-      border:1px solid rgba(255,255,255,.08);
-      box-shadow:inset 0 6px 18px rgba(0,0,0,.65);
-      color:#7ef7c6;
-      font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-      font-size:12px; line-height:1.62; white-space:pre-wrap; word-break:break-word;
-    }
-
-    .footer{
-      margin-top:16px;
-      color:var(--muted);
-      font-size:12px;
-      text-align:center;
-    }
-
-    @media (max-width: 1180px){
-      .panel{grid-template-columns:1fr 1fr}
-      .hero-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
-    }
-    @media (max-width: 760px){
-      .panel{grid-template-columns:1fr}
-      .hero-stats{grid-template-columns:1fr}
-      .actions,.stats-grid,.kv-grid{grid-template-columns:1fr}
-      .hero{padding:24px 20px}
-    }
+    .ok { color: #22c55e; }
+    .bad { color: #ef4444; }
   </style>
 </head>
 <body>
-  <div class="grid-bg"></div>
-  <div class="orb a"></div>
-  <div class="orb b"></div>
-  <div class="orb c"></div>
-
   <div class="wrap">
-    <section class="hero">
-      <div class="hero-top">
-        <div>
-          <div class="kicker"><span class="pulse"></span> Bot Nexus / Multi-Worker Control</div>
-          <h1>Command three bots from one glass cockpit.</h1>
-          <p class="sub">
-            Toggle power, inspect latest runtime, failures, and estimated daily KV operation usage for each Worker.
-            Replace the URLs in <code>BOTS</code> and deploy this as a static Netlify site.
-          </p>
-        </div>
+    <h1>Bot Control Panel</h1>
+    <p>Use this page to control your Cloudflare Worker bot.</p>
+
+    <div class="card">
+      <h2>Master Control</h2>
+      <div class="row">
+        <button class="green" onclick="callApi('/on')">Turn ON</button>
+        <button class="red" onclick="callApi('/off')">Turn OFF</button>
       </div>
+    </div>
 
-      <div class="hero-stats">
-        <div class="hero-stat">
-          <div class="label">Bots</div>
-          <div class="value" id="heroBots">3</div>
-        </div>
-        <div class="hero-stat">
-          <div class="label">Online</div>
-          <div class="value" id="heroOnline">0</div>
-        </div>
-        <div class="hero-stat">
-          <div class="label">Failed Today</div>
-          <div class="value" id="heroFailures">0</div>
-        </div>
-        <div class="hero-stat">
-          <div class="label">Last Refresh</div>
-          <div class="value" id="heroRefresh">—</div>
-        </div>
+    <div class="card">
+      <h2>Generation Control</h2>
+      <div class="row">
+        <button class="green" onclick="callApi('/generation-on')">Generation ON</button>
+        <button class="red" onclick="callApi('/generation-off')">Generation OFF</button>
       </div>
-    </section>
+    </div>
 
-    <section class="panel" id="panel"></section>
+    <div class="card">
+      <h2>Validation Control</h2>
+      <div class="row">
+        <button class="green" onclick="callApi('/validation-on')">Validation ON</button>
+        <button class="red" onclick="callApi('/validation-off')">Validation OFF</button>
+      </div>
+    </div>
 
-    <div class="footer">The KV area is estimated from app-side counters stored by each Worker.</div>
+    <div class="card">
+      <h2>Status</h2>
+      <div class="row">
+        <button class="blue" onclick="loadStatus()">Refresh Status</button>
+      </div>
+      <div id="statusText" class="status-box">No status loaded yet.</div>
+      <pre id="output">Waiting...</pre>
+    </div>
   </div>
 
   <script>
-    const BOTS = [
-      {
-        key: "livebot",
-        name: "LiveBot",
-        short: "L",
-        url: "https://livebot.themrmillion.workers.dev",
-        accent: "#6f7cff"
-      },
-      {
-        key: "bot2",
-        name: "Bot Two",
-        short: "B2",
-        url: "https://YOUR-SECOND-WORKER.workers.dev",
-        accent: "#00d5ff"
-      },
-      {
-        key: "bot3",
-        name: "Bot Three",
-        short: "B3",
-        url: "https://YOUR-THIRD-WORKER.workers.dev",
-        accent: "#a855f7"
-      }
-    ];
+    const BASE_URL = "YOUR_WORKER_URL";
 
-    const panel = document.getElementById("panel");
-    const heroOnline = document.getElementById("heroOnline");
-    const heroFailures = document.getElementById("heroFailures");
-    const heroRefresh = document.getElementById("heroRefresh");
-    document.getElementById("heroBots").textContent = String(BOTS.length);
+    async function callApi(path) {
+      const output = document.getElementById("output");
+      const statusText = document.getElementById("statusText");
 
-    const state = new Map();
+      output.textContent = "Loading...";
+      statusText.textContent = "Request in progress...";
 
-    function fmtNum(n) {
-      return Number(n || 0).toLocaleString();
-    }
-
-    function fmtMs(n) {
-      const v = Number(n || 0);
-      return `${v} ms`;
-    }
-
-    function fmtUtc(s) {
-      if (!s) return "—";
-      const d = new Date(s);
-      if (Number.isNaN(d.getTime())) return s;
-      return d.toLocaleString();
-    }
-
-    function log(key, msg) {
-      const box = document.querySelector(`[data-log="${key}"]`);
-      if (!box) return;
-      const stamp = new Date().toLocaleTimeString();
-      box.textContent = `[${stamp}] ${msg}\n\n` + box.textContent;
-    }
-
-    function cardTemplate(bot) {
-      return `
-        <article class="bot-card" id="card-${bot.key}" style="--accent:${bot.accent}">
-          <div class="bot-inner">
-            <div class="bot-head">
-              <div class="bot-title">
-                <div class="bot-logo">${bot.short}</div>
-                <div>
-                  <div class="bot-name">${bot.name}</div>
-                  <div class="bot-url">${bot.url}</div>
-                </div>
-              </div>
-              <div class="pill unknown" data-pill="${bot.key}">UNKNOWN</div>
-            </div>
-
-            <div class="status-shell">
-              <div class="status-line">
-                <div class="dot unknown" data-dot="${bot.key}"></div>
-                <div class="state" data-state="${bot.key}">Unknown</div>
-              </div>
-              <div class="meta" data-meta="${bot.key}">Waiting for /meta</div>
-            </div>
-
-            <div class="toggle-row">
-              <div class="toggle-copy">
-                <h3>Master Switch</h3>
-                <p>OFF keeps cron alive but makes the bot no-op.</p>
-              </div>
-              <label class="switch">
-                <input type="checkbox" data-toggle="${bot.key}">
-                <span class="slider"></span>
-              </label>
-            </div>
-
-            <div class="filters-box">
-              <div class="filters-title">Signal Filters</div>
-
-              <div class="filter-list">
-                <div class="filter-item">
-                  <div class="filter-copy">
-                    <h4>Trader Timezone Filter</h4>
-                    <p>Remove signals by configured timezone danger levels.</p>
-                  </div>
-                  <label class="switch">
-                    <input type="checkbox" data-filter-timezone="${bot.key}">
-                    <span class="slider"></span>
-                  </label>
-                </div>
-
-                <div class="filter-item">
-                  <div class="filter-copy">
-                    <h4>News Filter</h4>
-                    <p>Remove signals near configured news events.</p>
-                  </div>
-                  <label class="switch">
-                    <input type="checkbox" data-filter-news="${bot.key}">
-                    <span class="slider"></span>
-                  </label>
-                </div>
-
-                <div class="filter-item">
-                  <div class="filter-copy">
-                    <h4>EMA Trend Filter</h4>
-                    <p>Apply trend filtering before Telegram send.</p>
-                  </div>
-                  <label class="switch">
-                    <input type="checkbox" data-filter-trend="${bot.key}">
-                    <span class="slider"></span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-                        <div class="runtime-box">
-              <div class="filters-title">Generation / Validation Window</div>
-                            <div class="runtime-toggle-row">
-                <div class="runtime-copy">
-                  <h4>Generate Only Estável Window</h4>
-                  <p>Auto-fetch the server timezone map and only generate during Estável time.</p>
-                </div>
-                <label class="switch">
-                  <input type="checkbox" data-runtime-stable-only="${bot.key}">
-                  <span class="slider"></span>
-                </label>
-              </div>
-
-              <div class="runtime-grid">
-                <div class="runtime-row">
-                  <div class="runtime-copy">
-                    <h4>Signal Start Delay</h4>
-                    <p>Minutes after current slot before generation window starts.</p>
-                  </div>
-                  <input class="runtime-input" type="number" min="0" step="1" data-runtime-start-delay="${bot.key}" value="2">
-                </div>
-
-                <div class="runtime-row">
-                  <div class="runtime-copy">
-                    <h4>Signal Window</h4>
-                    <p>Generation window size in minutes.</p>
-                  </div>
-                  <input class="runtime-input" type="number" min="1" step="1" data-runtime-signal-window="${bot.key}" value="5">
-                </div>
-
-                <div class="runtime-row">
-                  <div class="runtime-copy">
-                    <h4>Validation Delay</h4>
-                    <p>Minutes after signal window before validation starts.</p>
-                  </div>
-                  <input class="runtime-input" type="number" min="0" step="1" data-runtime-validation-delay="${bot.key}" value="3">
-                </div>
-              </div>
-
-              <div class="runtime-actions">
-                <button class="ghost" data-runtime-save="${bot.key}">Save Window Settings</button>
-              </div>
-            </div>
-            
-            <div class="stats-grid">
-              <div class="stat">
-                <div class="label">Last Runtime</div>
-                <div class="value" data-last-ms="${bot.key}">—</div>
-              </div>
-              <div class="stat">
-                <div class="label">Average Runtime</div>
-                <div class="value" data-avg-ms="${bot.key}">—</div>
-              </div>
-              <div class="stat">
-                <div class="label">Runs Today</div>
-                <div class="value" data-runs="${bot.key}">—</div>
-              </div>
-              <div class="stat">
-                <div class="label">Failures Today</div>
-                <div class="value" data-failures="${bot.key}">—</div>
-              </div>
-            </div>
-
-            <div class="kv-grid">
-              <div class="kv">
-                <div class="k">KV Reads</div>
-                <div class="v" data-kv-reads="${bot.key}">—</div>
-                <div class="s" data-kv-reads-left="${bot.key}">left: —</div>
-              </div>
-              <div class="kv">
-                <div class="k">KV Writes</div>
-                <div class="v" data-kv-writes="${bot.key}">—</div>
-                <div class="s" data-kv-writes-left="${bot.key}">left: —</div>
-              </div>
-              <div class="kv">
-                <div class="k">KV Deletes</div>
-                <div class="v" data-kv-deletes="${bot.key}">—</div>
-                <div class="s" data-kv-deletes-left="${bot.key}">left: —</div>
-              </div>
-              <div class="kv">
-                <div class="k">KV Lists</div>
-                <div class="v" data-kv-lists="${bot.key}">—</div>
-                <div class="s" data-kv-lists-left="${bot.key}">left: —</div>
-              </div>
-            </div>
-
-            <div class="actions">
-              <button class="primary" data-refresh="${bot.key}">Refresh</button>
-              <button class="ghost" data-ping="${bot.key}">Ping</button>
-              <button class="primary" data-on="${bot.key}">Force ON</button>
-              <button class="danger" data-off="${bot.key}">Force OFF</button>
-            </div>
-
-            <div class="log" data-log="${bot.key}">Ready.</div>
-          </div>
-        </article>
-      `;
-    }
-
-    panel.innerHTML = BOTS.map(cardTemplate).join("");
-
-    function setBusy(key, busy) {
-      const selectors = [
-        `[data-refresh="${key}"]`,
-        `[data-ping="${key}"]`,
-        `[data-on="${key}"]`,
-        `[data-off="${key}"]`,
-        `[data-toggle="${key}"]`,
-        `[data-filter-timezone="${key}"]`,
-        `[data-filter-news="${key}"]`,
-        `[data-filter-trend="${key}"]`,
-        `[data-runtime-start-delay="${key}"]`,
-        `[data-runtime-signal-window="${key}"]`,
-        `[data-runtime-validation-delay="${key}"]`,
-        `[data-runtime-save="${key}"]`,
-        `[data-runtime-stable-only="${key}"]`,
-      ];
-      selectors.forEach(sel => {
-        const el = document.querySelector(sel);
-        if (el) el.disabled = busy;
-      });
-    }
-
-    async function safeJson(res) {
-      const text = await res.text();
-      try { return JSON.parse(text); }
-      catch { return { raw: text }; }
-    }
-
-    function applyMeta(bot, data) {
-      const enabled = data.enabled === true;
-      const pill = document.querySelector(`[data-pill="${bot.key}"]`);
-      const dot = document.querySelector(`[data-dot="${bot.key}"]`);
-      const st = document.querySelector(`[data-state="${bot.key}"]`);
-      const meta = document.querySelector(`[data-meta="${bot.key}"]`);
-      const toggle = document.querySelector(`[data-toggle="${bot.key}"]`);
-
-      toggle.checked = enabled;
-            const filters = data.filters || {};
-      const timezoneToggle = document.querySelector(`[data-filter-timezone="${bot.key}"]`);
-      const newsToggle = document.querySelector(`[data-filter-news="${bot.key}"]`);
-      const trendToggle = document.querySelector(`[data-filter-trend="${bot.key}"]`);
-
-      if (timezoneToggle) timezoneToggle.checked = filters?.timezone?.enabled === true;
-      if (newsToggle) newsToggle.checked = filters?.news?.enabled === true;
-      if (trendToggle) trendToggle.checked = filters?.trend?.enabled === true;
-            const runtimeConfig = data.runtimeConfig || {};
-      const startDelayInput = document.querySelector(`[data-runtime-start-delay="${bot.key}"]`);
-      const signalWindowInput = document.querySelector(`[data-runtime-signal-window="${bot.key}"]`);
-      const validationDelayInput = document.querySelector(`[data-runtime-validation-delay="${bot.key}"]`);
-            const stableOnlyToggle = document.querySelector(`[data-runtime-stable-only="${bot.key}"]`);
-
-      if (startDelayInput) startDelayInput.value = String(runtimeConfig.signalStartDelayMinutes ?? 2);
-      if (signalWindowInput) signalWindowInput.value = String(runtimeConfig.signalWindowMinutes ?? 5);
-      if (validationDelayInput) validationDelayInput.value = String(runtimeConfig.validationDelayMinutes ?? 3);
-            if (stableOnlyToggle) stableOnlyToggle.checked = runtimeConfig.stableOnlyEnabled === true;
-
-      if (enabled) {
-        pill.className = "pill online";
-        pill.textContent = "ONLINE";
-        dot.className = "dot online";
-        st.textContent = "Bot Enabled";
-      } else {
-        pill.className = "pill offline";
-        pill.textContent = "OFFLINE";
-        dot.className = "dot offline";
-        st.textContent = "Bot Disabled";
-      }
-
-      const rt = data.runtime || {};
-      const kv = data.kv || {};
-      const est = kv.estimated || {};
-      const rem = kv.remaining || {};
-
-      document.querySelector(`[data-last-ms="${bot.key}"]`).textContent = fmtMs(rt.lastMs);
-      document.querySelector(`[data-avg-ms="${bot.key}"]`).textContent = fmtMs(rt.avgMs);
-      document.querySelector(`[data-runs="${bot.key}"]`).textContent = fmtNum(rt.runsToday);
-      document.querySelector(`[data-failures="${bot.key}"]`).textContent = fmtNum(rt.failuresToday);
-
-      document.querySelector(`[data-kv-reads="${bot.key}"]`).textContent = fmtNum(est.reads);
-      document.querySelector(`[data-kv-writes="${bot.key}"]`).textContent = fmtNum(est.writes);
-      document.querySelector(`[data-kv-deletes="${bot.key}"]`).textContent = fmtNum(est.deletes);
-      document.querySelector(`[data-kv-lists="${bot.key}"]`).textContent = fmtNum(est.lists);
-
-      document.querySelector(`[data-kv-reads-left="${bot.key}"]`).textContent = `left: ${fmtNum(rem.reads)}`;
-      document.querySelector(`[data-kv-writes-left="${bot.key}"]`).textContent = `left: ${fmtNum(rem.writes)}`;
-      document.querySelector(`[data-kv-deletes-left="${bot.key}"]`).textContent = `left: ${fmtNum(rem.deletes)}`;
-      document.querySelector(`[data-kv-lists-left="${bot.key}"]`).textContent = `left: ${fmtNum(rem.lists)}`;
-
-      meta.textContent =
-        `id=${data.botId || bot.key} | last=${fmtUtc(rt.lastRunAtUtc)} | status=${rt.lastStatus || "unknown"}`
-        + (rt.lastError ? ` | error=${rt.lastError}` : "");
-
-      state.set(bot.key, data);
-    }
-
-    function applyUnknown(bot, message) {
-      const pill = document.querySelector(`[data-pill="${bot.key}"]`);
-      const dot = document.querySelector(`[data-dot="${bot.key}"]`);
-      const st = document.querySelector(`[data-state="${bot.key}"]`);
-      const meta = document.querySelector(`[data-meta="${bot.key}"]`);
-      pill.className = "pill unknown";
-      pill.textContent = "UNKNOWN";
-      dot.className = "dot unknown";
-      st.textContent = "Unknown";
-            const timezoneToggle = document.querySelector(`[data-filter-timezone="${bot.key}"]`);
-      const newsToggle = document.querySelector(`[data-filter-news="${bot.key}"]`);
-      const trendToggle = document.querySelector(`[data-filter-trend="${bot.key}"]`);
-
-      if (timezoneToggle) timezoneToggle.checked = false;
-      if (newsToggle) newsToggle.checked = false;
-      if (trendToggle) trendToggle.checked = false;
-            const startDelayInput = document.querySelector(`[data-runtime-start-delay="${bot.key}"]`);
-      const signalWindowInput = document.querySelector(`[data-runtime-signal-window="${bot.key}"]`);
-      const validationDelayInput = document.querySelector(`[data-runtime-validation-delay="${bot.key}"]`);
-            const stableOnlyToggle = document.querySelector(`[data-runtime-stable-only="${bot.key}"]`);
-
-      if (startDelayInput) startDelayInput.value = "—";
-      if (signalWindowInput) signalWindowInput.value = "—";
-      if (validationDelayInput) validationDelayInput.value = "—";
-            if (stableOnlyToggle) stableOnlyToggle.checked = false;
-      meta.textContent = message || "Request failed";
-    }
-
-    async function fetchMeta(bot) {
-      setBusy(bot.key, true);
       try {
-        const res = await fetch(`${bot.url}/meta`, {
-          method: "GET",
-          headers: { "accept": "application/json" }
-        });
-        const data = await safeJson(res);
-        if (!res.ok) throw new Error(data.error || data.raw || `HTTP ${res.status}`);
-        applyMeta(bot, data);
-        log(bot.key, `Meta refreshed.`);
-      } catch (err) {
-        applyUnknown(bot, err.message || String(err));
-        log(bot.key, `Meta failed: ${err.message || String(err)}`);
-      } finally {
-        setBusy(bot.key, false);
-        updateHero();
-      }
-    }
-
-    async function setBot(bot, on) {
-      setBusy(bot.key, true);
-      try {
-        const res = await fetch(`${bot.url}${on ? "/bot/on" : "/bot/off"}`, {
-          method: "POST",
-          headers: { "accept": "application/json" }
-        });
-        const data = await safeJson(res);
-        if (!res.ok) throw new Error(data.error || data.raw || `HTTP ${res.status}`);
-        log(bot.key, `${on ? "Enabled" : "Disabled"} successfully.`);
-        await fetchMeta(bot);
-      } catch (err) {
-        log(bot.key, `Switch failed: ${err.message || String(err)}`);
-        applyUnknown(bot, err.message || String(err));
-      } finally {
-        setBusy(bot.key, false);
-      }
-    }
-
-        async function setFilter(bot, filterKey, enabled) {
-      setBusy(bot.key, true);
-      try {
-        const res = await fetch(`${bot.url}/filters`, {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            "accept": "application/json"
-          },
-          body: JSON.stringify({
-            [filterKey]: { enabled }
-          })
-        });
-        const data = await safeJson(res);
-        if (!res.ok) throw new Error(data.error || data.raw || `HTTP ${res.status}`);
-        log(bot.key, `${filterKey} filter ${enabled ? "enabled" : "disabled"}.`);
-        await fetchMeta(bot);
-      } catch (err) {
-        log(bot.key, `Filter update failed: ${err.message || String(err)}`);
-        applyUnknown(bot, err.message || String(err));
-      } finally {
-        setBusy(bot.key, false);
-      }
-    }
-
-    async function saveRuntime(bot) {
-      setBusy(bot.key, true);
-      try {
-        const signalStartDelayMinutes = Number(document.querySelector(`[data-runtime-start-delay="${bot.key}"]`)?.value || 0);
-        const signalWindowMinutes = Number(document.querySelector(`[data-runtime-signal-window="${bot.key}"]`)?.value || 0);
-        const validationDelayMinutes = Number(document.querySelector(`[data-runtime-validation-delay="${bot.key}"]`)?.value || 0);
-        const stableOnlyEnabled = document.querySelector(`[data-runtime-stable-only="${bot.key}"]`)?.checked === true;
-
-        const res = await fetch(`${bot.url}/runtime`, {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            "accept": "application/json"
-          },
-          body: JSON.stringify({
-            signalStartDelayMinutes,
-            signalWindowMinutes,
-            validationDelayMinutes,
-            stableOnlyEnabled
-          })
+        const res = await fetch(BASE_URL + path, {
+          method: "GET"
         });
 
-        const data = await safeJson(res);
-        if (!res.ok) throw new Error(data.error || data.raw || `HTTP ${res.status}`);
+        const data = await res.json();
+        output.textContent = JSON.stringify(data, null, 2);
 
-        log(bot.key, `Runtime window updated.`);
-        await fetchMeta(bot);
+        if (data.ok) {
+          statusText.innerHTML = '<span class="ok">Success</span>: ' + path;
+        } else {
+          statusText.innerHTML = '<span class="bad">Failed</span>: ' + path;
+        }
       } catch (err) {
-        log(bot.key, `Runtime update failed: ${err.message || String(err)}`);
-        applyUnknown(bot, err.message || String(err));
-      } finally {
-        setBusy(bot.key, false);
+        output.textContent = String(err);
+        statusText.innerHTML = '<span class="bad">Error</span>: ' + String(err);
       }
     }
-    
-    async function pingBot(bot) {
-      setBusy(bot.key, true);
+
+    async function loadStatus() {
+      const output = document.getElementById("output");
+      const statusText = document.getElementById("statusText");
+
+      output.textContent = "Loading status...";
+      statusText.textContent = "Checking worker status...";
+
       try {
-        const res = await fetch(`${bot.url}/`, {
-          method: "GET",
-          headers: { "accept": "application/json" }
+        const res = await fetch(BASE_URL + "/status", {
+          method: "GET"
         });
-        const data = await safeJson(res);
-        if (!res.ok) throw new Error(data.error || data.raw || `HTTP ${res.status}`);
-        log(bot.key, `Ping ok: ${JSON.stringify(data)}`);
+
+        const data = await res.json();
+        output.textContent = JSON.stringify(data, null, 2);
+
+        if (data.ok) {
+          const totalCycles = Array.isArray(data.cycles) ? data.cycles.length : 0;
+          statusText.innerHTML = `<span class="ok">Worker reachable</span> | cycles in KV: ${totalCycles}`;
+        } else {
+          statusText.innerHTML = '<span class="bad">Status failed</span>';
+        }
       } catch (err) {
-        log(bot.key, `Ping failed: ${err.message || String(err)}`);
-      } finally {
-        setBusy(bot.key, false);
+        output.textContent = String(err);
+        statusText.innerHTML = '<span class="bad">Error</span>: ' + String(err);
       }
     }
-
-    function updateHero() {
-      let online = 0;
-      let failures = 0;
-      for (const bot of BOTS) {
-        const d = state.get(bot.key);
-        if (!d) continue;
-        if (d.enabled) online += 1;
-        failures += Number(d?.runtime?.failuresToday || 0);
-      }
-      heroOnline.textContent = String(online);
-      heroFailures.textContent = fmtNum(failures);
-      heroRefresh.textContent = new Date().toLocaleTimeString();
-    }
-
-    BOTS.forEach(bot => {
-      document.querySelector(`[data-refresh="${bot.key}"]`).addEventListener("click", () => fetchMeta(bot));
-      document.querySelector(`[data-ping="${bot.key}"]`).addEventListener("click", () => pingBot(bot));
-      document.querySelector(`[data-on="${bot.key}"]`).addEventListener("click", () => setBot(bot, true));
-      document.querySelector(`[data-off="${bot.key}"]`).addEventListener("click", () => setBot(bot, false));
-      document.querySelector(`[data-toggle="${bot.key}"]`).addEventListener("change", (e) => setBot(bot, e.target.checked));
-            document.querySelector(`[data-filter-timezone="${bot.key}"]`).addEventListener("change", (e) => setFilter(bot, "timezone", e.target.checked));
-      document.querySelector(`[data-filter-news="${bot.key}"]`).addEventListener("change", (e) => setFilter(bot, "news", e.target.checked));
-      document.querySelector(`[data-filter-trend="${bot.key}"]`).addEventListener("change", (e) => setFilter(bot, "trend", e.target.checked));
-            document.querySelector(`[data-runtime-save="${bot.key}"]`).addEventListener("click", () => saveRuntime(bot));
-    });
-
-    async function refreshAll() {
-      await Promise.all(BOTS.map(fetchMeta));
-    }
-
-    refreshAll();
-    setInterval(refreshAll, 20000);
   </script>
 </body>
 </html>
